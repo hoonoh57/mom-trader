@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>mom-trader</title>
+<style>
+body{margin:0;background:#141414;color:#ddd;font:13px 'Malgun Gothic',Consolas,sans-serif}
+#top{display:flex;align-items:center;gap:12px;padding:6px 12px;background:#1d1d1d;border-bottom:1px solid #333}
+#top b{font-size:15px}
+#top button{background:#333;color:#ddd;border:1px solid #555;padding:2px 10px;cursor:pointer}
+.badge{padding:2px 10px;border-radius:10px;font-weight:bold;cursor:pointer}
+.ok{background:#1f5f2a;color:#cfc}.bad{background:#7a1d1d;color:#fcc}.wait{background:#444;color:#ccc}
+#meta{color:#888}
+nav{display:flex;gap:2px;padding:6px 12px 0;background:#1a1a1a;border-bottom:1px solid #333}
+nav button{background:#222;color:#aaa;border:1px solid #333;border-bottom:none;padding:7px 16px;cursor:pointer;font:inherit}
+nav button.on{background:#2c2c2c;color:#fff}
+section{display:none;padding:14px}section.on{display:block}
+table{border-collapse:collapse}td,th{border:1px solid #333;padding:3px 8px;font-family:Consolas,monospace}
+th{background:#222}.y{color:#7f7}.n{color:#f77}.ph{color:#777}
+pre{color:#f99;white-space:pre-wrap}
+</style></head><body>
+<div id="top"><b>mom-trader</b><span id="badge" class="badge wait">checking...</span><span id="meta"></span><button id="recheck">recheck</button></div>
+<nav id="tabs">
+<button data-t="tab-main">&#xB9E4;&#xB9E4; &#xAC80;&#xC99D;</button>
+<button data-t="tab-logic">&#xC804;&#xB7B5; &#xB85C;&#xC9C1;</button>
+<button data-t="tab-data">&#xB370;&#xC774;&#xD130;&#x00B7;&#xAC80;&#xC99D;</button>
+<button data-t="tab-sim">&#xC2DC;&#xBBAC;&#xB808;&#xC774;&#xC158;</button>
+<button data-t="tab-release">&#xACB0;&#xACFC;&#xBB3C; &#xCD9C;&#xB825;</button>
+</nav>
+<section id="tab-main"><p class="ph">Main: date/time query, capture list, A/B trade chart (S6-S7)</p></section>
+<section id="tab-logic"><p class="ph">Strategy logic document (S8)</p></section>
+<section id="tab-data">
+<h3>Frozen module hash check</h3>
+<table id="hash"><thead><tr><th>id</th><th>kind</th><th>file</th><th>registered</th><th>actual</th><th>result</th><th>tools copy</th></tr></thead><tbody></tbody></table>
+<pre id="err"></pre>
+<p class="ph">Data coverage table (S3-S4), reproduction gate (S5)</p>
+</section>
+<section id="tab-sim"><p class="ph">Causal bar replay (S10)</p></section>
+<section id="tab-release"><p class="ph">Release package: SPEC, PARAMS, golden tests, LLM brief (S11)</p></section>
+<script>
+(function () {
+  var tabs = document.querySelectorAll('#tabs button');
+  function show(id) {
+    if (!document.getElementById(id)) id = 'tab-main';
+    for (var i = 0; i < tabs.length; i++) {
+      var t = tabs[i].getAttribute('data-t'), on = (t === id);
+      tabs[i].className = on ? 'on' : '';
+      document.getElementById(t).className = on ? 'on' : '';
+    }
+    try { localStorage.setItem('mt.tab', id); } catch (e) { }
+  }
+  for (var i = 0; i < tabs.length; i++) tabs[i].onclick = function () { show(this.getAttribute('data-t')); };
+  var saved = null;
+  try { saved = localStorage.getItem('mt.tab'); } catch (e) { }
+  show(saved || 'tab-main');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function load() {
+    var b = document.getElementById('badge');
+    b.className = 'badge wait'; b.textContent = 'checking...';
+    fetch('/api/status', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
+      b.className = 'badge ' + (s.ok ? 'ok' : 'bad');
+      b.textContent = s.ok ? ('ENGINES OK ' + s.passed + '/' + s.total) : ('BLOCKED ' + s.failed + ' failed');
+      var v = s.versions || {}, vs = [];
+      for (var k in v) vs.push(k + '=' + v[k]);
+      document.getElementById('meta').textContent = 'node ' + s.node + ' | ' + s.server + ' | ' + vs.join(' ') + ' | ' + s.time;
+      var h = '';
+      (s.rows || []).forEach(function (r) {
+        h += '<tr><td>' + esc(r.id) + '</td><td>' + esc(r.kind) + '</td><td>' + esc(r.file) + '</td><td>' + esc(r.want) + '</td><td>' + esc(r.got) +
+          '</td><td class="' + (r.ok ? 'y' : 'n') + '">' + (r.ok ? 'OK' : 'FAIL ' + esc(r.err)) + '</td><td>' + esc(r.src || '-') + '</td></tr>';
+      });
+      document.querySelector('#hash tbody').innerHTML = h;
+      document.getElementById('err').textContent = s.loadErr || ((s.missing && s.missing.length) ? 'missing: ' + s.missing.join(', ') : '');
+    }).catch(function (e) { b.className = 'badge bad'; b.textContent = 'server unreachable'; });
+  }
+  document.getElementById('badge').onclick = function () { show('tab-data'); };
+  document.getElementById('recheck').onclick = load;
+  load();
+})();
+</script>
+</body></html>

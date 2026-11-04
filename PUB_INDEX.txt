@@ -1,8 +1,12 @@
-# PUB_INDEX source=E:\parent\projects\rea\projects\mom-trader time=2026-11-05T08:34:09 files=118
+# PUB_INDEX source=E:\parent\projects\rea\projects\mom-trader time=2026-11-05T08:45:35 files=123
 # sha256_12  bytes  lines  path
 fe17c4e7ac72  1849  21  docs/progress.md
 d68a45784669  48029  652  PLAN.md
 db76e0c449b0  981  24  README.md
+ba5df1cb9841  1545  20  research/CHARTER.md
+3aef29de04f2  1920  30  research/HANDOFF.md
+08ff0cc1d8ae  6813  117  research/LEDGER.md
+b1292f5b723b  1276  26  research/STAGES.md
 18460ac7a97a  13008  230  setup/09_fetch_ticks.ps1
 3c7638a31a09  6995  111  setup/12_fetch_daily.ps1
 853fb89488e3  286  11  strategies/candidates/C001.json
@@ -118,3 +122,4 @@ a4bf5cc21999  14596  232  tools/ui/s3.cjs
 ab901c5cb2a4  27985  416  tools/ui/s4_target.cjs
 e77361b4ba04  19787  300  tools/ui/s4_warmup.cjs
 22cf9b6c7907  3597  72  tools/ui/server.cjs
+9f7bdf43fd41  4776  78  ui/index.html
