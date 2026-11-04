@@ -1,0 +1,9 @@
+{
+  "id": "C023",
+  "name": "Mom(80) + Stop 2%",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": { "MomLen": 80, "StopPct": 2 },
+  "note": "C013 + tighter hard stop",
+  "created": "2026-11-03T02:17:25.072Z"
+}

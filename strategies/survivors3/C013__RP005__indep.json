@@ -1,0 +1,172 @@
+{
+  "key": "C013__RP005__indep",
+  "strategy": "C013",
+  "profile": "RP005",
+  "profileSha": "bb74dbf88623",
+  "mode": "indep",
+  "engine": "v3",
+  "params": {
+    "MomLen": 80,
+    "SafeTh": 100,
+    "SafeExitTh": 100,
+    "SafeConfirm": 1,
+    "P1": 7,
+    "P2": 14,
+    "P3": 5,
+    "StrongA": 1000000000,
+    "BigMode": "abs",
+    "BigTh": 50000000,
+    "RelWin": 20,
+    "RelK": 3,
+    "BigNeedUp": 1,
+    "BigNeedST": 1,
+    "ArmSkip": 1,
+    "ArmSameSession": 1,
+    "EmaLen": 200,
+    "StLen": 14,
+    "StMult": 1.5,
+    "TickScope": 120,
+    "TickK": 1,
+    "TickAbs": 0,
+    "DispMax": 112,
+    "DispUntil": 1000,
+    "LimPct": 29,
+    "SurgePct": 25,
+    "LimMode": "pullback",
+    "SurgeMode": "pullback",
+    "PbPct": 5,
+    "EntryStart": 900,
+    "EntryEnd": 1520,
+    "ExitTime": 1520,
+    "SessionStartMax": 905,
+    "TargetPct": 5,
+    "StopPct": 3,
+    "TrailPct": 2,
+    "SafeBelow": "hold",
+    "SafeAbove": "hold",
+    "UnsafeBelow": "macd_sig",
+    "UnsafeAbove": "immediate",
+    "FeePct": 0.25,
+    "SlipPct": 0,
+    "MaxTrades": 10,
+    "ArmMode": "state",
+    "SafeNoLoss": 1,
+    "SafeMinPct": 0,
+    "ReentryGap": 0,
+    "Match": "_AL_120t_",
+    "Date": ""
+  },
+  "risk": {
+    "id": "RP005",
+    "name": "struct stop cap (no skip)",
+    "account": {
+      "maxSlots": {
+        "enabled": false,
+        "n": 3
+      },
+      "maxEntriesPerSource": {
+        "enabled": false,
+        "n": 1
+      },
+      "maxDailyEntries": {
+        "enabled": false,
+        "n": 10
+      },
+      "dailyLoss": {
+        "enabled": false,
+        "pct": 2,
+        "action": "block"
+      },
+      "dailyProfitLock": {
+        "enabled": false,
+        "pct": 5,
+        "action": "block"
+      },
+      "consecLoss": {
+        "enabled": false,
+        "n": 3,
+        "pauseMin": 30
+      },
+      "noReentrySameDay": {
+        "enabled": false
+      },
+      "flatten": {
+        "enabled": false,
+        "time": "151500",
+        "allowOvernight": false
+      }
+    },
+    "position": {
+      "hardStop": {
+        "enabled": false,
+        "pct": 3
+      },
+      "structStop": {
+        "enabled": true,
+        "lookback": 20,
+        "bufTicks": 1,
+        "maxPct": 3,
+        "onFar": "cap"
+      },
+      "takeProfit": {
+        "enabled": false,
+        "pct": 5,
+        "ratio": 0.5
+      },
+      "protect": {
+        "enabled": false,
+        "atPct": 2,
+        "levelPct": 0
+      },
+      "trail": {
+        "enabled": false,
+        "afterPct": 3,
+        "dropPct": 2
+      },
+      "timeStop": {
+        "enabled": false,
+        "bars": 30,
+        "minPct": 0.5
+      },
+      "manualHoldKeepsHardStop": true
+    },
+    "timing": {
+      "guard": "tick",
+      "ignoreBeforeHms": 90000,
+      "startMode": "entryFirst",
+      "restartCheck": "confirm"
+    },
+    "order": {
+      "entryPrice": "market",
+      "entryOffsetTicks": 0,
+      "exitPrice": "market",
+      "exitOffsetTicks": 0,
+      "pendingCancel": {
+        "enabled": false,
+        "sec": 120
+      }
+    },
+    "sizing": {
+      "mode": "fixedAmount",
+      "amount": 1000000,
+      "pctCash": 20,
+      "riskPerTradePct": 0.5,
+      "maxWeightPct": 30
+    }
+  },
+  "status": "provisional",
+  "checks": [
+    {
+      "at": "2026-11-03T02:13:36.331Z",
+      "dataset": "7e5902daac",
+      "stockDays": 8,
+      "ok": true,
+      "n": 31,
+      "sum": 8.2926,
+      "baseSum": 5.9386,
+      "mdd": 8.8154,
+      "share": 0.75,
+      "reasons": []
+    }
+  ]
+}

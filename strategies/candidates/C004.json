@@ -1,0 +1,11 @@
+{
+  "id": "C004",
+  "name": "이탈·목표전 강도0선",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "UnsafeBelow": "macd_zero"
+  },
+  "note": "이탈 직후 시그널↓ 털림 방지",
+  "created": "2026-11-02T19:29:48.654Z"
+}

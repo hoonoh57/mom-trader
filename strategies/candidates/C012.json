@@ -1,0 +1,11 @@
+{
+  "id": "C012",
+  "name": "손절 2%",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "StopPct": 2
+  },
+  "note": "",
+  "created": "2026-11-02T19:29:48.654Z"
+}

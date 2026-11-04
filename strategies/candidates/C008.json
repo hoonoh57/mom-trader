@@ -1,0 +1,11 @@
+{
+  "id": "C008",
+  "name": "목표 7%",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "TargetPct": 7
+  },
+  "note": "고MFE 종목 목표 상향",
+  "created": "2026-11-02T19:29:48.654Z"
+}

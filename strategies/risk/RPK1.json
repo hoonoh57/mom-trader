@@ -1,0 +1,6 @@
+{ "id": "RPK1", "name": "KATCH stoploss style (loss -3 / profit +5 full / protect)",
+  "account":  { "maxSlots": { "enabled": true, "n": 3 }, "noReentrySameDay": { "enabled": true } },
+  "position": { "hardStop": { "enabled": true, "pct": 3 },
+                "takeProfit": { "enabled": true, "pct": 5, "ratio": 1 },
+                "protect": { "enabled": true, "atPct": 3, "levelPct": 1 } },
+  "sizing":   { "mode": "fixedAmount", "amount": 1000000 } }

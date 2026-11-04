@@ -1,0 +1,9 @@
+{
+  "id": "C021",
+  "name": "SafeNoLoss 0",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": { "SafeNoLoss": 0 },
+  "note": "allow loss exit inside safe zone",
+  "created": "2026-11-03T02:17:25.072Z"
+}

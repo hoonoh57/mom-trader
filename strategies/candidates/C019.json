@@ -1,0 +1,12 @@
+{
+    "id":  "C019",
+    "name":  "Mom(120)+안심 강도0선 익절",
+    "engine":  "v1",
+    "base":  "S000",
+    "overrides":  {
+                      "SafeBelow":  "macd_zero",
+                      "MomLen":  120
+                  },
+    "note":  "손실매도 금지 유지, 수익 중일 때만 강도0선 청산",
+    "created":  "2026-11-02T19:36:55.5972494Z"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "C027",
+  "name": "Mom80 + ST exit after target 5",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": { "MomLen": 80, "SafeAbove": "supertrend" },
+  "note": "conservative exit: profit secured then SuperTrend down",
+  "created": "2026-11-03T05:50:19.163Z"
+}

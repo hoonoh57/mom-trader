@@ -1,0 +1,5 @@
+{ "id": "RPK2", "name": "KATCH trailing style (after +3, drop 1.5)",
+  "account":  { "maxSlots": { "enabled": true, "n": 3 }, "noReentrySameDay": { "enabled": true } },
+  "position": { "hardStop": { "enabled": true, "pct": 3 },
+                "trail": { "enabled": true, "afterPct": 3, "dropPct": 1.5 } },
+  "sizing":   { "mode": "fixedAmount", "amount": 1000000 } }

@@ -1,0 +1,12 @@
+{
+    "id":  "C018",
+    "name":  "Mom(120)+이탈·목표전 ST",
+    "engine":  "v1",
+    "base":  "S000",
+    "overrides":  {
+                      "UnsafeBelow":  "supertrend",
+                      "MomLen":  120
+                  },
+    "note":  "C015 + 생존 C003",
+    "created":  "2026-11-02T19:36:55.5972494Z"
+}

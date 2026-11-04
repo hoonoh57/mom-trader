@@ -1,0 +1,2 @@
+{ "id": "RP001", "name": "struct stop only",
+  "position": { "structStop": { "enabled": true, "lookback": 20, "bufTicks": 1, "maxPct": 3, "onFar": "skip" } } }

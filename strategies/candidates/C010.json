@@ -1,0 +1,11 @@
+{
+  "id": "C010",
+  "name": "재진입 간격 5봉",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "ReentryGap": 5
+  },
+  "note": "",
+  "created": "2026-11-02T19:29:48.654Z"
+}

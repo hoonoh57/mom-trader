@@ -1,0 +1,12 @@
+{
+  "id": "C006",
+  "name": "안심·목표후 트레일 2%",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "SafeAbove": "trail",
+    "TrailPct": 2
+  },
+  "note": "목표 후 수익 잠금",
+  "created": "2026-11-02T19:29:48.654Z"
+}

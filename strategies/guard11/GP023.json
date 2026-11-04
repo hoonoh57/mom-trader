@@ -1,0 +1,1 @@
+{"id":"GP023","name":"G02 rebound + ignoreOutsideSafe","patterns":{"G02":{"enabled":true,"action":"rebound"}},"filter":{"ignoreOutsideSafe":true}}

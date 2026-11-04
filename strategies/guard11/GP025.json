@@ -1,0 +1,1 @@
+{"id":"GP025","name":"G02 blockEpisode + ignoreOutsideSafe","patterns":{"G02":{"enabled":true,"action":"blockEpisode"}},"filter":{"ignoreOutsideSafe":true}}

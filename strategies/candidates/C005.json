@@ -1,0 +1,12 @@
+{
+  "id": "C005",
+  "name": "이탈·목표후 트레일 1.5%",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "UnsafeAbove": "trail",
+    "TrailPct": 1.5
+  },
+  "note": "고MFE 꼬리 수익 연장",
+  "created": "2026-11-02T19:29:48.654Z"
+}

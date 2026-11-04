@@ -1,0 +1,6 @@
+{ "id": "RP003", "name": "RP002 + partial TP 50% + breakeven protect",
+  "note": "takeProfit.pct must match S000 TargetPct",
+  "account":  { "dailyLoss": { "enabled": true, "pct": 2, "action": "block" } },
+  "position": { "structStop": { "enabled": true, "lookback": 20, "bufTicks": 1, "maxPct": 3, "onFar": "skip" },
+                "takeProfit": { "enabled": true, "pct": 5, "ratio": 0.5 },
+                "protect":    { "enabled": true, "atPct": 2, "levelPct": 0 } } }

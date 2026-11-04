@@ -1,0 +1,1 @@
+{ "id": "GP001", "name": "G01 tick-bar surge", "patterns": { "G01": { "enabled": true } } }

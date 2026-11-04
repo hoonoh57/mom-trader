@@ -1,0 +1,2 @@
+{ "id": "RP005", "name": "struct stop cap (no skip)",
+  "position": { "structStop": { "enabled": true, "lookback": 20, "bufTicks": 1, "maxPct": 3, "onFar": "cap" } } }

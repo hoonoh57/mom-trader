@@ -1,0 +1,11 @@
+{
+    "id":  "C015",
+    "name":  "안심존 Mom(120)",
+    "engine":  "v1",
+    "base":  "S000",
+    "overrides":  {
+                      "MomLen":  120
+                  },
+    "note":  "키움 Momentum 120과 동일",
+    "created":  "2026-11-02T19:36:55.5972494Z"
+}

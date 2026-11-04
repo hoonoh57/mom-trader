@@ -1,0 +1,11 @@
+{
+  "id": "C002",
+  "name": "안심 진입/이탈 2봉 확인",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "SafeConfirm": 2
+  },
+  "note": "안심존 깜빡임 억제",
+  "created": "2026-11-02T19:29:48.654Z"
+}

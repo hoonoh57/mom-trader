@@ -1,0 +1,1 @@
+{ "id": "GP010", "name": "all on, rebound", "patterns": { "G01": { "enabled": true }, "G02": { "enabled": true }, "G03": { "enabled": true }, "G04": { "enabled": true }, "G05": { "enabled": true }, "G06": { "enabled": true } } }

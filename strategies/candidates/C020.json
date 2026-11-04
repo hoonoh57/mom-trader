@@ -1,0 +1,12 @@
+{
+    "id":  "C020",
+    "name":  "Mom(120)+이탈 2봉 확인",
+    "engine":  "v1",
+    "base":  "S000",
+    "overrides":  {
+                      "SafeConfirm":  2,
+                      "MomLen":  120
+                  },
+    "note":  "확장 안심존에서 확인봉 효과",
+    "created":  "2026-11-02T19:36:55.5972494Z"
+}

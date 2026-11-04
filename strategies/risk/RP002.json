@@ -1,0 +1,3 @@
+{ "id": "RP002", "name": "RP001 + daily loss -2% block",
+  "account":  { "dailyLoss": { "enabled": true, "pct": 2, "action": "block" } },
+  "position": { "structStop": { "enabled": true, "lookback": 20, "bufTicks": 1, "maxPct": 3, "onFar": "skip" } } }

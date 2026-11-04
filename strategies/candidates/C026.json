@@ -1,0 +1,9 @@
+{
+  "id": "C026",
+  "name": "S000 + ST exit after target 2",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": { "SafeAbove": "supertrend", "TargetPct": 2 },
+  "note": "conservative exit: profit secured then SuperTrend down",
+  "created": "2026-11-03T05:50:19.163Z"
+}

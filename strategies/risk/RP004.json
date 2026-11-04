@@ -1,0 +1,8 @@
+{ "id": "RP004", "name": "RP003 + no reentry + 1 per source + pending cancel 120s",
+  "account":  { "dailyLoss": { "enabled": true, "pct": 2, "action": "block" },
+                "noReentrySameDay": { "enabled": true },
+                "maxEntriesPerSource": { "enabled": true, "n": 1 } },
+  "position": { "structStop": { "enabled": true, "lookback": 20, "bufTicks": 1, "maxPct": 3, "onFar": "skip" },
+                "takeProfit": { "enabled": true, "pct": 5, "ratio": 0.5 },
+                "protect":    { "enabled": true, "atPct": 2, "levelPct": 0 } },
+  "order":    { "pendingCancel": { "enabled": true, "sec": 120 } } }

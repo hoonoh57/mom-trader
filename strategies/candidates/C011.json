@@ -1,0 +1,12 @@
+{
+  "id": "C011",
+  "name": "히스테리시스+ST",
+  "engine": "v1",
+  "base": "S000",
+  "overrides": {
+    "SafeExitTh": 99.5,
+    "UnsafeBelow": "supertrend"
+  },
+  "note": "C001+C003",
+  "created": "2026-11-02T19:29:48.654Z"
+}
