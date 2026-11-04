@@ -2,28 +2,73 @@
 <html lang="ko"><head><meta charset="utf-8"><title>mom-trader</title>
 <style>
 body{margin:0;background:#141414;color:#ddd;font:13px 'Malgun Gothic',Consolas,sans-serif}
-#top{display:flex;align-items:center;gap:12px;padding:6px 12px;background:#1d1d1d;border-bottom:1px solid #333}
+#top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:6px 12px;background:#1d1d1d;border-bottom:1px solid #333}
 #top b{font-size:15px}
-#top button{background:#333;color:#ddd;border:1px solid #555;padding:2px 10px;cursor:pointer}
+button{background:#333;color:#ddd;border:1px solid #555;padding:2px 10px;cursor:pointer;font:inherit}
 .badge{padding:2px 10px;border-radius:10px;font-weight:bold;cursor:pointer}
 .ok{background:#1f5f2a;color:#cfc}.bad{background:#7a1d1d;color:#fcc}.wait{background:#444;color:#ccc}
-#meta{color:#888}
-nav{display:flex;gap:2px;padding:6px 12px 0;background:#1a1a1a;border-bottom:1px solid #333}
-nav button{background:#222;color:#aaa;border:1px solid #333;border-bottom:none;padding:7px 16px;cursor:pointer;font:inherit}
+#meta{color:#888;width:100%}
+#goal{color:#fd8;font-weight:bold}
+#msg{color:#8cf}
+nav{display:flex;flex-wrap:wrap;gap:2px;padding:6px 12px 0;background:#1a1a1a;border-bottom:1px solid #333}
+nav button{background:#222;color:#aaa;border:1px solid #333;border-bottom:none;padding:7px 16px}
 nav button.on{background:#2c2c2c;color:#fff}
+nav .sep{width:14px}
 section{display:none;padding:14px}section.on{display:block}
 table{border-collapse:collapse}td,th{border:1px solid #333;padding:3px 8px;font-family:Consolas,monospace}
 th{background:#222}.y{color:#7f7}.n{color:#f77}.ph{color:#777}
 pre{color:#f99;white-space:pre-wrap}
+pre.doc{color:#ddd;font-family:Consolas,'Malgun Gothic',monospace;background:#1a1a1a;border:1px solid #333;padding:10px;max-height:70vh;overflow:auto}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}
+input{background:#222;color:#ddd;border:1px solid #555;padding:3px 6px;width:260px}
+h3,h4{margin:6px 0}
 </style></head><body>
-<div id="top"><b>mom-trader</b><span id="badge" class="badge wait">checking...</span><span id="meta"></span><button id="recheck">recheck</button></div>
+<div id="top">
+<b>mom-trader</b><span id="badge" class="badge wait">checking...</span>
+<span id="goal">GOAL 읽는 중...</span>
+<button id="cpRes">결과 복사</button><button id="cpHand">인계문 복사</button><span id="msg"></span>
+<button id="recheck">recheck</button>
+<span id="meta"></span>
+</div>
 <nav id="tabs">
-<button data-t="tab-main">&#xB9E4;&#xB9E4; &#xAC80;&#xC99D;</button>
-<button data-t="tab-logic">&#xC804;&#xB7B5; &#xB85C;&#xC9C1;</button>
-<button data-t="tab-data">&#xB370;&#xC774;&#xD130;&#x00B7;&#xAC80;&#xC99D;</button>
-<button data-t="tab-sim">&#xC2DC;&#xBBAC;&#xB808;&#xC774;&#xC158;</button>
-<button data-t="tab-release">&#xACB0;&#xACFC;&#xBB3C; &#xCD9C;&#xB825;</button>
+<button data-t="tab-stage">연구 진행</button>
+<button data-t="tab-ledger">장부</button>
+<button data-t="tab-review">인간 검토</button>
+<button data-t="tab-run">실행·결과</button>
+<span class="sep"></span>
+<button data-t="tab-main">매매 검증</button>
+<button data-t="tab-logic">전략 로직</button>
+<button data-t="tab-data">데이터·검증</button>
+<button data-t="tab-sim">시뮬레이션</button>
+<button data-t="tab-release">결과물 출력</button>
 </nav>
+
+<section id="tab-stage">
+<div class="row"><h3>연구 진행</h3><span id="head" class="ph"></span><button id="rsReload">새로고침</button></div>
+<table id="rsFiles"><thead><tr><th>파일</th><th>bytes</th><th>수정 시각</th><th>상태</th></tr></thead><tbody></tbody></table>
+<h4>STAGES (단계·게이트)</h4><pre class="doc" id="stagesDoc"></pre>
+<h4>CHARTER (목표·판정 원칙)</h4><pre class="doc" id="charterDoc"></pre>
+</section>
+
+<section id="tab-ledger">
+<div class="row"><h3>합의·결과·단서 장부</h3>
+<input id="lf" placeholder="검색 (예: D-04, H1, NXT)">
+<button data-f="D-">합의 D</button><button data-f="R-">결과 R</button><button data-f="C-">단서 C</button><button data-f="">전체</button>
+<span id="lcount" class="ph"></span></div>
+<pre class="doc" id="ledgerDoc"></pre>
+</section>
+
+<section id="tab-review">
+<h3>인간 검토</h3>
+<p class="ph">U2 예정: out\charts 인간검증 차트 열람 + 라벨 입력 → out\human\review.csv 저장, 「검토 결과 복사」 버튼.</p>
+<p class="ph">그 전까지는 차트 파일을 탐색기에서 직접 열어 검토한다 (합의 D-04).</p>
+</section>
+
+<section id="tab-run">
+<div class="row"><h3>실행·결과</h3><span id="resMeta" class="ph"></span><button id="resReload">새로고침</button><button id="cpRes2">결과 복사</button></div>
+<pre class="doc" id="resDoc"></pre>
+</section>
+
 <section id="tab-main"><p class="ph">Main: date/time query, capture list, A/B trade chart (S6-S7)</p></section>
 <section id="tab-logic"><p class="ph">Strategy logic document (S8)</p></section>
 <section id="tab-data">
@@ -34,45 +79,122 @@ pre{color:#f99;white-space:pre-wrap}
 </section>
 <section id="tab-sim"><p class="ph">Causal bar replay (S10)</p></section>
 <section id="tab-release"><p class="ph">Release package: SPEC, PARAMS, golden tests, LLM brief (S11)</p></section>
+
 <script>
 (function () {
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function msg(t) { $('msg').textContent = t; }
+  function getJson(u) { return fetch(u, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }); }
+
   var tabs = document.querySelectorAll('#tabs button');
   function show(id) {
-    if (!document.getElementById(id)) id = 'tab-main';
+    if (!$(id)) id = 'tab-stage';
     for (var i = 0; i < tabs.length; i++) {
       var t = tabs[i].getAttribute('data-t'), on = (t === id);
       tabs[i].className = on ? 'on' : '';
-      document.getElementById(t).className = on ? 'on' : '';
+      $(t).className = on ? 'on' : '';
     }
     try { localStorage.setItem('mt.tab', id); } catch (e) { }
+    if (id === 'tab-run') loadResult();
   }
   for (var i = 0; i < tabs.length; i++) tabs[i].onclick = function () { show(this.getAttribute('data-t')); };
-  var saved = null;
-  try { saved = localStorage.getItem('mt.tab'); } catch (e) { }
-  show(saved || 'tab-main');
 
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function copyText(t, label) {
+    function done(ok) { msg(ok ? (label + ' 복사됨 (' + t.length + '자) - 대화창에 Ctrl+V') : (label + ' 복사 실패')); }
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta); ta.select(); var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { }
+      document.body.removeChild(ta); done(ok);
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(function () { done(true); }, fallback);
+    else fallback();
+  }
+
   function load() {
-    var b = document.getElementById('badge');
+    var b = $('badge');
     b.className = 'badge wait'; b.textContent = 'checking...';
-    fetch('/api/status', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
+    getJson('/api/status').then(function (s) {
       b.className = 'badge ' + (s.ok ? 'ok' : 'bad');
       b.textContent = s.ok ? ('ENGINES OK ' + s.passed + '/' + s.total) : ('BLOCKED ' + s.failed + ' failed');
       var v = s.versions || {}, vs = [];
       for (var k in v) vs.push(k + '=' + v[k]);
-      document.getElementById('meta').textContent = 'node ' + s.node + ' | ' + s.server + ' | ' + vs.join(' ') + ' | ' + s.time;
+      $('meta').textContent = 'node ' + s.node + ' | ' + s.server + ' | ' + vs.join(' ') + ' | ' + s.time;
       var h = '';
       (s.rows || []).forEach(function (r) {
         h += '<tr><td>' + esc(r.id) + '</td><td>' + esc(r.kind) + '</td><td>' + esc(r.file) + '</td><td>' + esc(r.want) + '</td><td>' + esc(r.got) +
           '</td><td class="' + (r.ok ? 'y' : 'n') + '">' + (r.ok ? 'OK' : 'FAIL ' + esc(r.err)) + '</td><td>' + esc(r.src || '-') + '</td></tr>';
       });
       document.querySelector('#hash tbody').innerHTML = h;
-      document.getElementById('err').textContent = s.loadErr || ((s.missing && s.missing.length) ? 'missing: ' + s.missing.join(', ') : '');
-    }).catch(function (e) { b.className = 'badge bad'; b.textContent = 'server unreachable'; });
+      $('err').textContent = s.loadErr || ((s.missing && s.missing.length) ? 'missing: ' + s.missing.join(', ') : '');
+    }).catch(function () { b.className = 'badge bad'; b.textContent = 'server unreachable'; });
   }
-  document.getElementById('badge').onclick = function () { show('tab-data'); };
-  document.getElementById('recheck').onclick = load;
-  load();
+
+  var RS = null;
+  function fileOf(n) { if (!RS) return null; for (var i = 0; i < RS.files.length; i++) if (RS.files[i].name === n) return RS.files[i]; return null; }
+  function loadResearch() {
+    getJson('/api/research').then(function (d) {
+      RS = d;
+      var h = d.head || {};
+      $('head').textContent = h.ok ? ('HEAD=' + h.sha.slice(0, 12) + ' (마지막 push 기준)') : ('HEAD 확인 불가: ' + h.err);
+      var t = '';
+      d.files.forEach(function (f) {
+        t += '<tr><td>research/' + esc(f.name) + '</td><td>' + f.bytes + '</td><td>' + esc(f.mtime) + '</td><td class="' + (f.ok ? 'y' : 'n') + '">' + (f.ok ? 'OK' : 'MISSING ' + esc(f.err)) + '</td></tr>';
+      });
+      document.querySelector('#rsFiles tbody').innerHTML = t;
+      var st = fileOf('STAGES.md'), ch = fileOf('CHARTER.md');
+      $('stagesDoc').textContent = st && st.ok ? st.text : 'STAGES.md 없음';
+      $('charterDoc').textContent = ch && ch.ok ? ch.text : 'CHARTER.md 없음';
+      var g = (ch && ch.ok ? ch.text : '').split(/\r?\n/).filter(function (l) { return /GOAL-[12]/.test(l); }).slice(0, 2)
+        .map(function (l) { return l.replace(/^[#\-\*\s]+/, ''); }).join('  |  ');
+      $('goal').textContent = g || 'GOAL 미확인: research/CHARTER.md 확인 필요';
+      renderLedger();
+    }).catch(function (e) { $('goal').textContent = 'research 읽기 실패: ' + e.message; });
+  }
+  function renderLedger() {
+    var f = fileOf('LEDGER.md');
+    if (!f || !f.ok) { $('ledgerDoc').textContent = 'LEDGER.md 없음'; return; }
+    var q = $('lf').value.trim().toLowerCase(), lines = f.text.split(/\r?\n/);
+    if (!q) { $('ledgerDoc').textContent = f.text; $('lcount').textContent = lines.length + '줄'; return; }
+    var out = [], hit = 0;
+    lines.forEach(function (l, i) {
+      var m = l.toLowerCase().indexOf(q) >= 0;
+      if (m) hit++;
+      if (m || /^#/.test(l)) out.push(('    ' + (i + 1)).slice(-4) + '  ' + l);
+    });
+    $('ledgerDoc').textContent = out.join('\n');
+    $('lcount').textContent = hit + '줄 일치';
+  }
+  $('lf').oninput = renderLedger;
+  var fb = document.querySelectorAll('#tab-ledger button[data-f]');
+  for (var j = 0; j < fb.length; j++) fb[j].onclick = function () { $('lf').value = this.getAttribute('data-f'); renderLedger(); };
+
+  function loadResult() {
+    return getJson('/api/result').then(function (r) {
+      $('resMeta').textContent = r.name + (r.ok ? ' | ' + r.bytes + ' bytes | ' + r.mtime : ' | 없음 ' + r.err);
+      $('resDoc').textContent = r.ok ? r.text : '';
+      return r;
+    });
+  }
+  function copyResult() {
+    loadResult().then(function (r) { if (r.ok) copyText(r.text, '결과(FOR_OPUS.txt)'); else msg('FOR_OPUS.txt 없음'); })
+      .catch(function (e) { msg('결과 읽기 실패: ' + e.message); });
+  }
+  $('cpRes').onclick = copyResult;
+  $('cpRes2').onclick = copyResult;
+  $('resReload').onclick = loadResult;
+  $('cpHand').onclick = function () {
+    getJson('/api/handoff').then(function (h) { copyText(h.text, '인계문'); }).catch(function (e) { msg('인계문 실패: ' + e.message); });
+  };
+  $('rsReload').onclick = loadResearch;
+  $('badge').onclick = function () { show('tab-data'); };
+  $('recheck').onclick = function () { load(); loadResearch(); };
+
+  var saved = null;
+  try { saved = localStorage.getItem('mt.tab'); } catch (e) { }
+  show(saved || 'tab-stage');
+  load(); loadResearch();
 })();
 </script>
 </body></html>
