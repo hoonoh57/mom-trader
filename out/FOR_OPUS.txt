@@ -1,3 +1,6 @@
+GOAL-1: 잃지 않는다.
+GOAL-2: GOAL-1을 잊지 않는다.
+
 === PUB sync mode=push time=2026-11-05T08:52:59 ===
 GOAL-1: 잃지 않는다.
 GOAL-2: GOAL-1을 잊지 않는다.
