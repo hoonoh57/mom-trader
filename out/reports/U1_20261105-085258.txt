@@ -1,0 +1,16 @@
+=== U1a check 20261105-085258 result=PASS fails= ===
+[ok] server.cjs ascii bytes=6619
+[ok] index.html hangul count=222 bytes=10701
+[ok] node --check 
+[ok] server up :3109 
+[ok] status engines server=server-1.1 passed=7/7
+[ok] api/research code=200 HANDOFF.md:1920,CHARTER.md:1545,STAGES.md:1276,LEDGER.md:6813
+[ok] research GOAL 
+[ok] pub HEAD sha=5eaa52fb9e0eb5194031430d8e72bf2fa6bc7c1d
+[ok] api/result code=200
+[ok] api/handoff code=200 len=8430
+[ok] ui page code=200
+[ok] POST rejected code=405
+[ok] traversal 1 blocked code=403
+[ok] traversal 2 blocked code=403
+[ok] STAGES.md U1a appended

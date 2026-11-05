@@ -1,0 +1,28 @@
+== setup/09_fetch_ticks.ps1
+>   21: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+== setup/10_replay.ps1
+>    9: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+== setup/11_chart.ps1
+>   24: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+== setup/12_fetch_daily.ps1
+>   12: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+== setup/13_trade.ps1
+>   31: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/13a_patch.ps1
+>    2: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/14_lab.ps1
+>   12: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/15_candidates.ps1
+>    4: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/16_patch_codes.ps1
+>    2: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/17_leader.ps1
+>    9: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/20_risk.ps1
+>    6: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/20a_risk_fix.ps1
+>    3: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/20b_selftest_fix.ps1
+>    3: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+== setup/21_engine_v3.ps1
+>   14: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }

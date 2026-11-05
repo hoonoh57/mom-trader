@@ -1,0 +1,40 @@
+   1: import fs from 'node:fs';
+   2: import path from 'node:path';
+   3: 
+   4: const A = Object.fromEntries(process.argv.slice(2).map(s => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; }));
+   5: const num = k => { const v = Number(A[k]); if (!Number.isFinite(v)) throw new Error('bad param ' + k + '=' + A[k]); return v; };
+   6: const toSec = t => (+t.slice(0, 2)) * 3600 + (+t.slice(2, 4)) * 60 + (+t.slice(4, 6));
+   7: const P = {
+   8:   p1: num('p1'), p2: num('p2'), p3: num('p3'), momLen: num('momLen'), safeTh: num('safeTh'), strongA: num('strongA'),
+   9:   bigMode: A.bigMode, bigTh: num('bigTh'), bigIncl: A.bigIncl === '1', relWin: num('relWin'), relK: num('relK'), armSkip: num('armSkip'),
+  10:   maType: A.maType, maLen: num('maLen'), stLen: num('stLen'), stMult: num('stMult'), stAtr: A.stAtr,
+  11:   tickAbs: num('tickAbs'), tickK: num('tickK'), useEma: A.useEma === '1', useTick: A.useTick === '1', useDisp: A.useDisp === '1',
+  12:   limMode: A.limMode, limPct: num('limPct'), pbPct: num('pbPct'), dispMax: num('dispMax'),
+  13:   dispUntil: A.dispUntil === 'all' ? -1 : toSec(A.dispUntil.padEnd(6, '0')),
+  14:   openMults: String(A.openMults || '').split(',').map(Number).filter(x => x > 0)
+  15: };
+  16: P.maName = P.maType.toUpperCase() + P.maLen;
+  17: 
+  18: const TPL = String.raw`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>__TITLE__</title>
+  19: <style>
+  20: html,body{margin:0;background:#111;color:#ddd;font:12px Consolas,'Malgun Gothic',monospace;overflow:hidden}
+  21: #bar{height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;background:#1b1b1b;white-space:nowrap;overflow:hidden}
+  22: button{background:#333;color:#ddd;border:1px solid #555;padding:2px 8px;cursor:pointer}
+  23: #tip{position:absolute;left:8px;top:36px;background:rgba(0,0,0,.8);padding:4px 6px;white-space:pre;pointer-events:none;display:none}
+  24: canvas{display:block;cursor:crosshair}
+  25: .lg{color:#999}
+  26: </style></head><body>
+  27: <div id="bar"><b id="ttl"></b><button id="fit">당일</button><button id="all">전체</button><span id="info"></span>
+  28: <span class="lg">| <span style="color:#37e05a">●</span>1억 <span style="color:#ffd400">▲</span>ARM <span style="color:#ff4dff">▲</span>진입 <span style="color:#ff3030">×</span>상한가 <span style="color:#b070ff">×</span>이격 <span style="color:#aaa">×</span>EMA <span style="color:#ff9a30">×</span>체결</span></
+  29: <canvas id="c"></canvas><div id="tip"></div>
+  30: <script>
+  31: var D=__DATA__;
+  32: var B=D.bars,N=B.length,cv=document.getElementById('c'),g=cv.getContext('2d'),tip=document.getElementById('tip');
+  33: var T=0,DT=1,O=2,HI=3,LO=4,C=5,REF=6,MOM=7,NN=8,SG=9,AMT=10,TAA=11,FL=12,MA=13,ST=14,SD=15,R1=16,R5=17,DO=18,DSP=19;
+  34: var AX=78,XH=18,W=0,H=0,start=0,count=N,mx=-1,my=-1,drag=null,UP='#e34a4a',DN='#3f7fd6';
+  35: document.getElementById('ttl').textContent=D.title;document.getElementById('info').textContent=D.info;
+  36: function has(i,f){return (B[i][FL]&f)!==0;}
+  37: function sec(t){return (+t.slice(0,2))*3600+(+t.slice(2,4))*60+(+t.slice(4,6));}
+  38: var tStart=0;for(var k=0;k<N;k++){if(has(k,16)){tStart=k;break;}}
+  39: function clampView(){count=Math.max(20,Math.min(N,count));start=Math.max(0,Math.min(N-count,start));}
+  40: function fitDay(){start=tStart;count=N-tStart;draw();}

@@ -1,0 +1,1680 @@
+#MT-REPORT v=report-1.0 step=S0.probe ver=probe-1.0 verdict=PASS ts=2026-11-04T22:35:11.922Z dur=0.0s
+#DIR E:\parent\projects\rea\projects\mom-trader\out\reports\S0.probe_20261105-073511
+#ENV node=v24.19.0 ps=5.1.26100.9818 os=win32-x64 report=report-1.0 envFile=found secretsMasked=7
+#CHK 5/5 PASS
+#DATA show strategies/engines/v1.cjs:76-140 (total 198 lines, sha12 921bdbc3319c) lines=65
+   76:     }
+   77:     const big = new Array(N).fill(false); let win = 0;
+   78:     for (let i = 0; i < N; i++) {
+   79:       let rel = false;
+   80:       if (i >= P.RelWin) rel = amt[i] >= P.RelK * (win / P.RelWin);
+   81:       const abs = amt[i] >= P.BigTh;
+   82:       big[i] = P.BigMode === 'abs' ? abs : P.BigMode === 'rel' ? rel : (abs && rel);
+   83:       win += amt[i]; if (i >= P.RelWin) win -= amt[i - P.RelWin];
+   84:     }
+   85:     const cnt1 = new Array(N), thr = new Array(N), tickOk = new Array(N);
+   86:     let a1 = 0, a5 = 0;
+   87:     for (let i = 0; i < N; i++) {
+   88:       const t = bars[i].t;
+   89:       while (bars[a1].t <= t - 60) a1++;
+   90:       while (bars[a5].t <= t - 300) a5++;
+   91:       cnt1[i] = (i - a1 + 1) * P.TickScope;
+   92:       const avg5 = (i - a5 + 1) * P.TickScope / 5;
+   93:       thr[i] = Math.max(P.TickAbs, avg5 * P.TickK);
+   94:       tickOk[i] = cnt1[i] >= thr[i];
+   95:     }
+   96:     const disp = c.map((x, i) => emaL[i] > 0 ? x / emaL[i] * 100 : null);
+   97:     const safe = new Array(N).fill(false);
+   98:     let s = false, upRun = 0, dnRun = 0;
+   99:     for (let i = 0; i < N; i++) {
+  100:       const m = mom[i];
+  101:       if (m == null) { safe[i] = false; continue; }
+  102:       upRun = m >= P.SafeTh ? upRun + 1 : 0;
+  103:       dnRun = m < P.SafeExitTh ? dnRun + 1 : 0;
+  104:       if (!s && upRun >= P.SafeConfirm) s = true; else if (s && dnRun >= P.SafeConfirm) s = false;
+  105:       safe[i] = s;
+  106:     }
+  107:     return { mom, n, sig, ema: emaL, st: st.line, stDir: st.dir, amt, taamt, dayStart, big, cnt1, thr, tickOk, disp, safe };
+  108:   }
+  109:   function hit(rule, i, ind, b, pos, P) {
+  110:     switch (rule) {
+  111:       case 'hold': return false;
+  112:       case 'immediate': return true;
+  113:       case 'macd_zero': return ind.n[i] < 0;
+  114:       case 'macd_sig': return ind.n[i] < ind.sig[i];
+  115:       case 'supertrend': return ind.stDir[i] === -1;
+  116:       case 'trail': return b.c <= pos.peakC * (1 - P.TrailPct / 100);
+  117:       default: throw new Error('unknown rule ' + rule);
+  118:     }
+  119:   }
+  120:   function simulate(bars, ind, P, ctx) {
+  121:     const N = bars.length, trades = [], marks = [];
+  122:     const rej = { time: 0, count: 0, gap: 0, lim: 0, ema: 0, disp: 0, tick: 0 };
+  123:     const armMode = P.ArmMode === 'cross' ? 'cross' : 'state';
+  124:     const noLoss = Number(P.SafeNoLoss == null ? 1 : P.SafeNoLoss) > 0;
+  125:     const minPct = Number(P.SafeMinPct || 0), gap = Number(P.ReentryGap || 0);
+  126:     let armed = false, pos = null, hiDay = 0, pbDone = false, arms = 0, sigs = 0, lastI = -1, lastExit = -1e9, held = 0;
+  127:     const limMode = ctx.limKind === 'limit' ? P.LimMode : ctx.limKind === 'surge' ? P.SurgeMode : 'off';
+  128:     const closeTrade = (i, px, why) => {
+  129:       const gross = (px / pos.entry - 1) * 100, ret = gross - P.FeePct;
+  130:       trades.push({ inI: pos.idx, inPx: pos.entry, outI: i, outPx: px, why, gross, ret,
+  131:         mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held });
+  132:       marks.push({ i, k: 'exit', why, ret });
+  133:       pos = null; lastExit = i;
+  134:     };
+  135:     for (let i = ctx.start; i < N; i++) {
+  136:       const b = bars[i];
+  137:       if (b.d !== ctx.date) continue;
+  138:       lastI = i;
+  139:       if (b.h > hiDay) hiDay = b.h;
+  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;
+#END
+#DATA find /function |offHigh|HTS check|module.exports/ in tools\ui hits=266 files=16 lines=1607
+== tools/ui/archive.cjs
+     6: const asList = x => (Array.isArray(x) ? x : (x && typeof x === 'object' ? [x] : []));
+     7: 
+>    8: function decode(buf) {
+     9:   if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) return { text: buf.slice(3).toString('utf8'), enc: 'utf8-bom' };
+    10:   try { return { text: new TextDecoder('utf-8', { fatal: true }).decode(buf), enc: 'utf8' }; } catch (e) { /* not utf8 */ }
+  --
+    12: }
+    13: 
+>   14: function splitCsvLine(s) {
+    15:   const out = []; let cur = '', q = false;
+    16:   for (let i = 0; i < s.length; i++) {
+  --
+    26: 
+    27: // columns by position: 1 time, 2 date, 3 code, 4 name, 7 status
+>   28: function parseScreen(text) {
+    29:   const lines = text.split(/\r\n|\n|\r/);
+    30:   const header = splitCsvLine(lines[0] || '').map(s => s.trim());
+  --
+    51: }
+    52: 
+>   53: function planItems(rows, since, until) {
+    54:   const m = new Map();
+    55:   for (const r of rows) {
+  --
+    64: 
+    65: // same stop rule as 09 (prev bars before 'oldest' >= warmup), market AL, scope 120
+>   66: async function fetchBack(cl, q) {
+    67:   const rows = [];
+    68:   let next = '', end = '', bad = 0, pages = 0, prevN = 0;
+  --
+    87: }
+    88: 
+>   89: function selftest() {
+    90:   const R = [];
+    91:   const t = (name, fn) => {
+  --
+   118: }
+   119: 
+>  120: module.exports = { VERSION, ST_OK, decode, splitCsvLine, parseScreen, planItems, fetchBack, selftest };
+  --
+== tools/ui/engines.cjs
+     8: const REQUIRED = ['v1', 'risk1', 'v3', 'guard-1.0', 'guard-1.1', 'S000', 'R000'];
+     9: 
+>   10: function sha(b) { return crypto.createHash('sha256').update(b).digest('hex'); }
+    11: function readJson(f) { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); }
+    12: 
+  --
+     9: 
+    10: function sha(b) { return crypto.createHash('sha256').update(b).digest('hex'); }
+>   11: function readJson(f) { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); }
+    12: 
+    13: function targets(root) {
+  --
+    11: function readJson(f) { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); }
+    12: 
+>   13: function targets(root) {
+    14:   const SD = path.join(root, 'strategies');
+    15:   const list = [];
+  --
+    40: }
+    41: 
+>   42: function verify(root) {
+    43:   root = path.resolve(root);
+    44:   const rows = targets(root).map(function (t) {
+  --
+    42: function verify(root) {
+    43:   root = path.resolve(root);
+>   44:   const rows = targets(root).map(function (t) {
+    45:     const r = { id: t.id, kind: t.kind, file: t.file, rel: t.file ? path.relative(root, t.file).split(path.sep).join('/') : '',
+    46:       want: t.want, got: '', ok: false, err: t.err, src: '' };
+  --
+    64:     return r;
+    65:   });
+>   66:   const ids = rows.map(function (r) { return r.id; });
+    67:   const missing = REQUIRED.filter(function (id) { return ids.indexOf(id) < 0; });
+    68:   const ok = missing.length === 0 && rows.every(function (r) { return r.ok; });
+  --
+    65:   });
+    66:   const ids = rows.map(function (r) { return r.id; });
+>   67:   const missing = REQUIRED.filter(function (id) { return ids.indexOf(id) < 0; });
+    68:   const ok = missing.length === 0 && rows.every(function (r) { return r.ok; });
+    69:   return { version: VERSION, root: root, ok: ok, missing: missing, rows: rows };
+  --
+    66:   const ids = rows.map(function (r) { return r.id; });
+    67:   const missing = REQUIRED.filter(function (id) { return ids.indexOf(id) < 0; });
+>   68:   const ok = missing.length === 0 && rows.every(function (r) { return r.ok; });
+    69:   return { version: VERSION, root: root, ok: ok, missing: missing, rows: rows };
+    70: }
+  --
+    70: }
+    71: 
+>   72: function ver(m) { return m && m.VERSION ? String(m.VERSION) : '-'; }
+    73: 
+    74: function load(root) {
+  --
+    72: function ver(m) { return m && m.VERSION ? String(m.VERSION) : '-'; }
+    73: 
+>   74: function load(root) {
+    75:   const v = verify(root);
+    76:   if (!v.ok) {
+  --
+    75:   const v = verify(root);
+    76:   if (!v.ok) {
+>   77:     const bad = v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + '(' + r.err + ')'; })
+    78:       .concat(v.missing.map(function (m) { return m + '(missing)'; }));
+    79:     const e = new Error('hash verification failed, loading blocked: ' + bad.join(', '));
+  --
+    76:   if (!v.ok) {
+    77:     const bad = v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + '(' + r.err + ')'; })
+>   78:       .concat(v.missing.map(function (m) { return m + '(missing)'; }));
+    79:     const e = new Error('hash verification failed, loading blocked: ' + bad.join(', '));
+    80:     e.verify = v;
+  --
+    82:   }
+    83:   const f = {};
+>   84:   v.rows.forEach(function (r) { f[r.id] = r.file; });
+    85:   const V1 = require(f.v1), R = require(f.risk1), mk = require(f.v3);
+    86:   if (typeof mk !== 'function') throw new Error('v3 module is not a factory function');
+  --
+    88:   const G10 = require(f['guard-1.0']), G11 = require(f['guard-1.1']);
+    89:   const frozen = {};
+>   90:   v.rows.filter(function (r) { return r.kind === 'frozen'; }).forEach(function (r) { frozen[r.id] = readJson(r.file); });
+    91:   return { verify: v, V1: V1, R: R, E3: E3, G10: G10, G11: G11, frozen: frozen,
+    92:     versions: { v1: ver(V1), risk1: ver(R), v3: ver(E3), 'guard-1.0': ver(G10), 'guard-1.1': ver(G11) } };
+  --
+    93: }
+    94: 
+>   95: module.exports = { VERSION: VERSION, REQUIRED: REQUIRED, verify: verify, load: load, sha: sha, readJson: readJson };
+  --
+== tools/ui/kiwoom-fetch.cjs
+    12: const asList = x => (Array.isArray(x) ? x : (x && typeof x === 'object' ? [x] : []));
+    13: 
+>   14: function toNum(s) {
+    15:   if (s === null || s === undefined) return null;
+    16:   const t = String(s).trim().replace(/,/g, '');
+  --
+    22: 
+    23: // keys are lower-cased (PowerShell hashtable is case-insensitive)
+>   24: function readDotEnv(p) {
+    25:   const map = {};
+    26:   const txt = fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '');
+  --
+    39: const envGet = (m, name) => (m[String(name).toLowerCase()] === undefined ? '' : m[String(name).toLowerCase()]);
+    40: 
+>   41: function plain15(x) {
+    42:   const s = x.toPrecision(15);
+    43:   const m = s.match(/^(\d)(?:\.(\d+))?e([+-]\d+)$/);
+  --
+    51: 
+    52: // .NET Framework custom format "0.####" (maxDec=4,minDec=0) / "0.00" (2,2)
+>   53: function fmtNet(x, maxDec, minDec) {
+    54:   minDec = minDec || 0;
+    55:   if (!Number.isFinite(x)) return String(x);
+  --
+    79: 
+    80: // PowerShell "-f {0}" with [double] (G, 15 digits); null -> ''
+>   81: function fmtG(x) {
+    82:   if (x === null || x === undefined) return '';
+    83:   if (Number.isInteger(x) && Math.abs(x) < 1e15) return String(x);
+  --
+    85: }
+    86: 
+>   87: function tickRow(it) {
+    88:   const ts = String(it.cntr_tm === null || it.cntr_tm === undefined ? '' : it.cntr_tm).trim();
+    89:   if (ts.length < 14) return null;
+  --
+    93: }
+    94: 
+>   95: function tickLine(b, target) {
+    96:   const F = x => fmtNet(x, 4, 0);
+    97:   return [b.ts, b.date, b.time, F(b.o), F(b.h), F(b.l), F(b.c), F(b.v), F(b.amt), b.date === target ? '1' : '0'].join(',');
+  --
+    98: }
+    99: 
+>  100: function buildTick(rowsNewestFirst, target, warmup) {
+   101:   const arr = rowsNewestFirst.slice().reverse();
+   102:   const prev = arr.filter(b => b.date < target);
+  --
+   119: }
+   120: 
+>  121: function dailyRows(list) {
+   122:   const rows = [];
+   123:   for (const it of list) {
+  --
+   130: }
+   131: 
+>  132: function buildDaily(rows) {
+   133:   const lines = [DAILY_HEADER];
+   134:   for (let i = 0; i < rows.length; i++) {
+  --
+   140: }
+   141: 
+>  142: function firstDiff(aText, bText) {
+   143:   const a = aText.split('\r\n'), b = bText.split('\r\n');
+   144:   const n = Math.max(a.length, b.length);
+  --
+   150: 
+   151: // offline: parse an existing 09 output, recompute bar_amount, re-emit, compare bytes
+>  152: function roundTripTick(text) {
+   153:   const L = text.split('\r\n');
+   154:   if (L[L.length - 1] !== '') return { ok: false, line: L.length, a: 'no trailing CRLF', b: '' };
+  --
+   168: 
+   169: // offline: parse an existing 12 output, recompute chg_pct, re-emit, compare bytes
+>  170: function roundTripDaily(text) {
+   171:   const L = text.split('\r\n');
+   172:   if (L[L.length - 1] !== '') return { ok: false, line: L.length, a: 'no trailing CRLF', b: '' };
+  --
+   177: }
+   178: 
+>  179: async function httpPost(url, headers, body) {
+   180:   for (let attempt = 1; attempt <= 4; attempt++) {
+   181:     const res = await fetch(url, {
+  --
+   195: }
+   196: 
+>  197: function createClient(o) {
+   198:   if (!fs.existsSync(o.envPath)) throw new Error('.env not found: ' + o.envPath);
+   199:   const env = readDotEnv(o.envPath);
+  --
+   221: }
+   222: 
+>  223: async function fetchTicks(cl, q) {
+   224:   const scope = String(q.scope || '120'), mkt = q.market || 'AL', code = q.code;
+   225:   const stk = mkt === 'KRX' ? code : mkt === 'NXT' ? code + '_NX' : code + '_AL';
+  --
+   251: }
+   252: 
+>  253: async function fetchDaily(cl, q) {
+   254:   const r = await cl.chart('ka10081', { stk_cd: q.code, base_dt: q.baseDate, upd_stkpc_tp: '1' }, '');
+   255:   if (String(r.json.return_code) !== '0') throw new Error('ka10081 return_code=' + r.json.return_code + ' msg=' + r.json.return_msg);
+  --
+   265: }
+   266: 
+>  267: function selftest() {
+   268:   const R = [];
+   269:   const t = (name, fn) => {
+  --
+   317: }
+   318: 
+>  319: module.exports = {
+   320:   VERSION, TICK_HEADER, DAILY_HEADER, toNum, readDotEnv, envGet, fmtNet, fmtG, tickRow, tickLine, buildTick,
+   321:   dailyRows, buildDaily, firstDiff, roundTripTick, roundTripDaily, createClient, fetchTicks, fetchDaily, selftest, sleep
+  --
+== tools/ui/probe.cjs
+    14: const ROOT = path.resolve(A.root);
+    15: const TEXT_EXT = /\.(cjs|mjs|js|ts|ps1|psm1|json|md|txt|csv|html|css|log|bat|cmd)$/i;
+>   16: function pad(n) { return String(n).padStart(2, '0'); }
+    17: function ltime(ms) { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+    18: function rel(p) { return path.relative(ROOT, p).split(path.sep).join('/'); }
+  --
+    15: const TEXT_EXT = /\.(cjs|mjs|js|ts|ps1|psm1|json|md|txt|csv|html|css|log|bat|cmd)$/i;
+    16: function pad(n) { return String(n).padStart(2, '0'); }
+>   17: function ltime(ms) { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+    18: function rel(p) { return path.relative(ROOT, p).split(path.sep).join('/'); }
+    19: function isForbidden(p) { return /(^|[\\\/])\.env($|\.)/i.test(p) || /[\\\/]security([\\\/]|$)/i.test(p); }
+  --
+    16: function pad(n) { return String(n).padStart(2, '0'); }
+    17: function ltime(ms) { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+>   18: function rel(p) { return path.relative(ROOT, p).split(path.sep).join('/'); }
+    19: function isForbidden(p) { return /(^|[\\\/])\.env($|\.)/i.test(p) || /[\\\/]security([\\\/]|$)/i.test(p); }
+    20: function inRoot(p) { const a = path.resolve(p).toLowerCase(), b = ROOT.toLowerCase(); return a === b || a.indexOf(b + path.sep) === 0; }
+  --
+    17: function ltime(ms) { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+    18: function rel(p) { return path.relative(ROOT, p).split(path.sep).join('/'); }
+>   19: function isForbidden(p) { return /(^|[\\\/])\.env($|\.)/i.test(p) || /[\\\/]security([\\\/]|$)/i.test(p); }
+    20: function inRoot(p) { const a = path.resolve(p).toLowerCase(), b = ROOT.toLowerCase(); return a === b || a.indexOf(b + path.sep) === 0; }
+    21: function isBak(p) { return /\.bak/i.test(path.basename(p)); }
+  --
+    18: function rel(p) { return path.relative(ROOT, p).split(path.sep).join('/'); }
+    19: function isForbidden(p) { return /(^|[\\\/])\.env($|\.)/i.test(p) || /[\\\/]security([\\\/]|$)/i.test(p); }
+>   20: function inRoot(p) { const a = path.resolve(p).toLowerCase(), b = ROOT.toLowerCase(); return a === b || a.indexOf(b + path.sep) === 0; }
+    21: function isBak(p) { return /\.bak/i.test(path.basename(p)); }
+    22: 
+  --
+    19: function isForbidden(p) { return /(^|[\\\/])\.env($|\.)/i.test(p) || /[\\\/]security([\\\/]|$)/i.test(p); }
+    20: function inRoot(p) { const a = path.resolve(p).toLowerCase(), b = ROOT.toLowerCase(); return a === b || a.indexOf(b + path.sep) === 0; }
+>   21: function isBak(p) { return /\.bak/i.test(path.basename(p)); }
+    22: 
+    23: function walk(dir, depth, out, lim) {
+  --
+    21: function isBak(p) { return /\.bak/i.test(path.basename(p)); }
+    22: 
+>   23: function walk(dir, depth, out, lim) {
+    24:   let ents;
+    25:   try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+  --
+    24:   let ents;
+    25:   try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+>   26:   ents.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+    27:   for (const e of ents) {
+    28:     if (out.length >= lim) return;
+  --
+    35:   }
+    36: }
+>   37: function fileLine(p, withHash) {
+    38:   const st = fs.statSync(p);
+    39:   let h = '-';
+  --
+    41:   return rel(p) + '  ' + st.size + '  ' + ltime(st.mtimeMs) + '  ' + h;
+    42: }
+>   43: function pairs(o, out) {
+    44:   if (!o || typeof o !== 'object') return out;
+    45:   if (typeof o.file === 'string' && typeof o.sha256 === 'string') out.push(o);
+  --
+    48: }
+    49: 
+>   50: function secManifest(rep) {
+    51:   const main = path.join(ROOT, 'strategies', 'manifest.json');
+    52:   rep.check('strategies/manifest.json exists', fs.existsSync(main), main);
+  --
+    53:   const files = [];
+    54:   walk(path.join(ROOT, 'strategies'), 3, files, 5000);
+>   55:   const mans = files.filter(function (p) { return /manifest\.json$/i.test(path.basename(p)) && !isBak(p); });
+    56:   rep.note('manifests found: ' + mans.map(rel).join(', '));
+    57:   for (const m of mans) {
+  --
+    64:     for (const en of pairs(j, [])) {
+    65:       const cands = [path.join(dir, 'engines', en.file), path.join(dir, en.file)];
+>   66:       const f = cands.filter(function (c) { return fs.existsSync(c); })[0];
+    67:       if (!f) {
+    68:         if (isMain) rep.check('engine file exists ' + en.file, false, cands.join(' | '));
+  --
+    76: }
+    77: 
+>   78: function secTree(rep) {
+    79:   const spec = [['tools', 2], ['setup', 1], ['strategies', 3]];
+    80:   for (const s of spec) {
+  --
+    84:     walk(base, s[1], list, 3000);
+    85:     rep.data('tree ' + s[0] + ' files=' + list.length + (list.length >= 3000 ? ' (capped)' : '') + ' [path size mtime sha12]',
+>   86:       list.map(function (p) { return fileLine(p, !isBak(p)); }).join('\n'));
+    87:   }
+    88: }
+  --
+    88: }
+    89: 
+>   90: function secChart(rep) {
+    91:   const list = [];
+    92:   walk(path.join(ROOT, 'tools'), 2, list, 5000);
+  --
+    92:   walk(path.join(ROOT, 'tools'), 2, list, 5000);
+    93:   walk(path.join(ROOT, 'setup'), 1, list, 5000);
+>   94:   const c = list.filter(function (p) {
+    95:     const b = path.basename(p);
+    96:     return /(^|[^0-9])11_|chart/i.test(b) && TEXT_EXT.test(b) && !isBak(p);
+  --
+   100:     const L = fs.readFileSync(p, 'utf8').split(/\r?\n/);
+   101:     rep.data('head40 ' + rel(p) + ' (total ' + L.length + ' lines)',
+>  102:       L.slice(0, 40).map(function (s, i) { return String(i + 1).padStart(4) + ': ' + s.slice(0, 300); }).join('\n'));
+   103:   }
+   104:   if (c.length > 8) rep.data('chart candidates (more)', c.slice(8).map(rel).join('\n'));
+  --
+   105: }
+   106: 
+>  107: function secData(rep) {
+   108:   const groups = [['data/ticks', null], ['data/daily', null], ['data/screen', null], ['data/rest', null], ['logs', /^raw-.*\.json$/i]];
+   109:   for (const g of groups) {
+  --
+   112:     const list = [];
+   113:     walk(base, 2, list, 20000);
+>  114:     const sel = list.filter(function (p) { return !g[1] || g[1].test(path.basename(p)); });
+   115:     let total = 0;
+   116:     const lines = [];
+  --
+   120: }
+   121: 
+>  122: function secShow(rep) {
+   123:   const items = String(A.show).split(';').map(function (s) { return s.trim(); }).filter(Boolean);
+   124:   for (const it of items) {
+  --
+   121: 
+   122: function secShow(rep) {
+>  123:   const items = String(A.show).split(';').map(function (s) { return s.trim(); }).filter(Boolean);
+   124:   for (const it of items) {
+   125:     const m = /^(.*?)(?::(\d+)-(\d+))?$/.exec(it);
+  --
+   136: }
+   137: 
+>  138: function secFind(rep) {
+   139:   let pat = String(A.find), flags = '';
+   140:   if (pat.indexOf('(?i)') === 0) { pat = pat.slice(4); flags = 'i'; }
+  --
+   142:   try { re = new RegExp(pat, flags); } catch (e) { rep.check('find regex valid', false, e.message); return; }
+   143:   const ctxN = Math.max(0, Math.min(5, +A.findCtx || 0));
+>  144:   const dirs = String(A.findIn || 'tools,setup,strategies').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+   145:   const out = [];
+   146:   let hits = 0, nfiles = 0;
+  --
+   169: }
+   170: 
+>  171: R.run('S0.probe', { root: ROOT, version: VERSION, envPath: A.envPath }, async function (rep) {
+   172:   const sec = R.loadSecrets(A.envPath);
+   173:   rep.env('node', process.version);
+  --
+   179:   for (const c of R.selftest()) rep.check('selftest: ' + c.name, c.ok, c.detail);
+   180:   if (A.selfTestOnly) return;
+>  181:   const items = String(A.items || 'all').toLowerCase().split(',').map(function (s) { return s.trim(); });
+   182:   const has = function (n) { return items.indexOf('all') >= 0 || items.indexOf(n) >= 0; };
+   183:   if (has('manifest')) secManifest(rep);
+  --
+   180:   if (A.selfTestOnly) return;
+   181:   const items = String(A.items || 'all').toLowerCase().split(',').map(function (s) { return s.trim(); });
+>  182:   const has = function (n) { return items.indexOf('all') >= 0 || items.indexOf(n) >= 0; };
+   183:   if (has('manifest')) secManifest(rep);
+   184:   if (has('tree')) secTree(rep);
+  --
+== tools/ui/report.cjs
+    12: const SECRET_KEY_RE = /(KEY|SECRET|TOKEN|PASS|PWD|ACC|ACCOUNT)/i;
+    13: 
+>   14: function pad(n) { return String(n).padStart(2, '0'); }
+    15: function stamp(d) {
+    16:   d = d || new Date();
+  --
+    13: 
+    14: function pad(n) { return String(n).padStart(2, '0'); }
+>   15: function stamp(d) {
+    16:   d = d || new Date();
+    17:   return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' +
+  --
+    18:     pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    19: }
+>   20: function sha(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }
+    21: 
+    22: function loadSecrets(envPath) {
+  --
+    20: function sha(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }
+    21: 
+>   22: function loadSecrets(envPath) {
+    23:   const list = [];
+    24:   let txt = '';
+  --
+    34:     if (SECRET_KEY_RE.test(k) && v.length >= 4) list.push(v);
+    35:   }
+>   36:   list.sort(function (a, b) { return b.length - a.length; });
+    37:   return { list: list, ok: true };
+    38: }
+  --
+    38: }
+    39: 
+>   40: function mask(s, secrets) {
+    41:   let t = String(s);
+    42:   for (const v of (secrets || [])) { if (v) t = t.split(v).join('***(len=' + v.length + ')'); }
+  --
+    47: }
+    48: 
+>   49: function context(file, line, r) {
+    50:   const L = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    51:   const a = Math.max(1, line - r), b = Math.min(L.length, line + r);
+  --
+    55: }
+    56: 
+>   57: function frames(stack) {
+    58:   const out = [], seen = new Set();
+    59:   const re = /([A-Za-z]:\\[^\s():]+|\/[^\s():]+):(\d+)(?::(\d+))?/g;
+  --
+    73: }
+    74: 
+>   75: function errInfo(e, where) {
+    76:   const o = {
+    77:     where: where || '',
+  --
+    88: }
+    89: 
+>   90: function create(step, opt) {
+    91:   opt = opt || {};
+    92:   const t0 = Date.now();
+  --
+    95:   return {
+    96:     r: r,
+>   97:     env: function (k, v) { r.env[k] = String(v).replace(/\s+/g, '_'); },
+    98:     check: function (name, ok, detail) {
+    99:       r.checks.push({ name: String(name), ok: !!ok, detail: detail == null ? '' : String(detail) });
+  --
+    96:     r: r,
+    97:     env: function (k, v) { r.env[k] = String(v).replace(/\s+/g, '_'); },
+>   98:     check: function (name, ok, detail) {
+    99:       r.checks.push({ name: String(name), ok: !!ok, detail: detail == null ? '' : String(detail) });
+   100:       return !!ok;
+  --
+   100:       return !!ok;
+   101:     },
+>  102:     data: function (title, body) { r.data.push({ title: String(title), body: String(body == null ? '' : body) }); },
+   103:     note: function (s) { r.notes.push(String(s)); },
+   104:     error: function (e, where) { r.errors.push(errInfo(e, where)); },
+  --
+   101:     },
+   102:     data: function (title, body) { r.data.push({ title: String(title), body: String(body == null ? '' : body) }); },
+>  103:     note: function (s) { r.notes.push(String(s)); },
+   104:     error: function (e, where) { r.errors.push(errInfo(e, where)); },
+   105:     finish: function () {
+  --
+   102:     data: function (title, body) { r.data.push({ title: String(title), body: String(body == null ? '' : body) }); },
+   103:     note: function (s) { r.notes.push(String(s)); },
+>  104:     error: function (e, where) { r.errors.push(errInfo(e, where)); },
+   105:     finish: function () {
+   106:       const pass = r.errors.length === 0 && r.checks.every(function (c) { return c.ok; });
+  --
+   103:     note: function (s) { r.notes.push(String(s)); },
+   104:     error: function (e, where) { r.errors.push(errInfo(e, where)); },
+>  105:     finish: function () {
+   106:       const pass = r.errors.length === 0 && r.checks.every(function (c) { return c.ok; });
+   107:       r.verdict = pass ? 'PASS' : 'FAIL';
+  --
+   104:     error: function (e, where) { r.errors.push(errInfo(e, where)); },
+   105:     finish: function () {
+>  106:       const pass = r.errors.length === 0 && r.checks.every(function (c) { return c.ok; });
+   107:       r.verdict = pass ? 'PASS' : 'FAIL';
+   108:       r.ended = new Date().toISOString();
+  --
+   116:         ' verdict=' + r.verdict + ' ts=' + r.started + ' dur=' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
+   117:       H.push('#DIR ' + dir);
+>  118:       H.push('#ENV ' + Object.keys(r.env).map(function (k) { return k + '=' + r.env[k]; }).join(' '));
+   119:       const failed = r.checks.filter(function (c) { return !c.ok; });
+   120:       if (pass) {
+  --
+   117:       H.push('#DIR ' + dir);
+   118:       H.push('#ENV ' + Object.keys(r.env).map(function (k) { return k + '=' + r.env[k]; }).join(' '));
+>  119:       const failed = r.checks.filter(function (c) { return !c.ok; });
+   120:       if (pass) {
+   121:         H.push('#CHK ' + r.checks.length + '/' + r.checks.length + ' PASS');
+  --
+   123:         H.push('#CHK ' + (r.checks.length - failed.length) + '/' + r.checks.length + ' PASS, FAIL=' + failed.length + ', ERR=' + r.errors.length);
+   124:         for (const c of failed) H.push('#FAIL ' + c.name + ' :: ' + c.detail);
+>  125:         const okn = r.checks.filter(function (c) { return c.ok; }).map(function (c) { return c.name; });
+   126:         if (okn.length) H.push('#OKLIST ' + okn.join(' | '));
+   127:         for (const e of r.errors) {
+  --
+   127:         for (const e of r.errors) {
+   128:           H.push('#ERR ' + (e.where ? '[' + e.where + '] ' : '') + e.name + ': ' + e.message);
+>  129:           H.push('#STACK ' + e.stack.split(/\r?\n/).slice(0, 12).map(function (s) { return s.trim(); }).join(' <- '));
+   130:           if (e.extra) { H.push('#EXTRA'); H.push(e.extra.slice(0, 8000)); H.push('#END'); }
+   131:           for (const c of e.ctx) { H.push('#CTX ' + c.at); for (const l of c.lines) H.push(l); }
+  --
+   134:       for (const n of r.notes) H.push('#NOTE ' + n);
+   135:       let text = mask(H.join('\n') + '\n', secrets);
+>  136:       r.data.forEach(function (d, i) {
+   137:         const fname = String(i + 1).padStart(2, '0') + '_' + d.title.replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 40) + '.txt';
+   138:         const body = mask(d.body, secrets);
+  --
+   152: }
+   153: 
+>  154: async function run(step, opt, fn) {
+   155:   const rep = create(step, opt);
+   156:   const onFatal = function (e) { rep.error(e, 'uncaught'); };
+  --
+   154: async function run(step, opt, fn) {
+   155:   const rep = create(step, opt);
+>  156:   const onFatal = function (e) { rep.error(e, 'uncaught'); };
+   157:   process.on('uncaughtException', onFatal);
+   158:   try { await fn(rep); } catch (e) { rep.error(e, 'main'); }
+  --
+   169: }
+   170: 
+>  171: function selftest() {
+   172:   const out = [];
+   173:   const t = function (name, f) {
+  --
+   171: function selftest() {
+   172:   const out = [];
+>  173:   const t = function (name, f) {
+   174:     try { const d = f(); out.push({ name: name, ok: d === true, detail: d === true ? '' : String(d) }); }
+   175:     catch (e) { out.push({ name: name, ok: false, detail: String(e && e.stack) }); }
+  --
+   176:   };
+   177:   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-s0-'));
+>  178:   t('mask secrets/bearer/account, keep prices', function () {
+   179:     const s = mask('k=ABCDEFGH12345678 Bearer *** acct ********-** px 3100 {"token":"***"}', ['ABCDEFGH12345678']);
+   180:     if (s.indexOf('ABCDEFGH12345678') >= 0) return 'secret leaked';
+  --
+   186:     return true;
+   187:   });
+>  188:   t('env loader picks only secret-like keys', function () {
+   189:     const f = path.join(tmp, 'e.env');
+   190:     fs.writeFileSync(f, '# c\nKIWOOM_MOCK_APP_KEY="abcd1234xyz"\nKIWOOM_USE_MOCK=true\nPORT=3100\nMY_ACCOUNT=1234567890\n');
+  --
+   196:     return true;
+   197:   });
+>  198:   t('utf8 hangul roundtrip without BOM', function () {
+   199:     const s = '\uD55C\uAE00 \uD14C\uC2A4\uD2B8';
+   200:     const f = path.join(tmp, 'k.txt');
+  --
+   205:     return (back === s && back.length === s.length) ? true : 'mismatch len=' + back.length;
+   206:   });
+>  207:   t('size cap and FAIL report with code context', function () {
+   208:     const root = path.join(tmp, 'root');
+   209:     fs.mkdirSync(path.join(root, 'out'), { recursive: true });
+  --
+   209:     fs.mkdirSync(path.join(root, 'out'), { recursive: true });
+   210:     const bad = path.join(root, 'bad.cjs');
+>  211:     fs.writeFileSync(bad, "'use strict';\nfunction f() {\n  const a = 1;\n  throw new Error('boom-777');\n}\nmodule.exports = f;\n");
+   212:     const rep = create('selftest', { root: root, version: 't', envPath: path.join(tmp, 'none.env') });
+   213:     rep.check('dummy ok', true);
+  --
+   225:     if (txt.indexOf('#DATA small') < 0) return 'small section missing';
+   226:     const det = fs.readdirSync(path.join(res.dir, 'detail'));
+>  227:     const bigf = det.filter(function (n) { return n.indexOf('big') >= 0; })[0];
+   228:     if (!bigf || fs.statSync(path.join(res.dir, 'detail', bigf)).size < 300 * 1024) return 'detail full copy missing';
+   229:     return true;
+  --
+   229:     return true;
+   230:   });
+>  231:   t('PASS report is compact', function () {
+   232:     const root = path.join(tmp, 'root2');
+   233:     fs.mkdirSync(path.join(root, 'out'), { recursive: true });
+  --
+   246: }
+   247: 
+>  248: module.exports = { VERSION: VERSION, MAX: MAX, create: create, run: run, mask: mask,
+   249:   loadSecrets: loadSecrets, errInfo: errInfo, selftest: selftest, sha: sha, stamp: stamp };
+  --
+== tools/ui/s1.cjs
+    15: const ROOT = path.resolve(A.root);
+    16: 
+>   17: function row(v, id) { return v.rows.filter(function (r) { return r.id === id; })[0] || null; }
+    18: function badList(v) { return v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + ':' + r.err; }).concat(v.missing).join(', '); }
+    19: 
+  --
+    16: 
+    17: function row(v, id) { return v.rows.filter(function (r) { return r.id === id; })[0] || null; }
+>   18: function badList(v) { return v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + ':' + r.err; }).concat(v.missing).join(', '); }
+    19: 
+    20: function get(port, p) {
+  --
+    18: function badList(v) { return v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + ':' + r.err; }).concat(v.missing).join(', '); }
+    19: 
+>   20: function get(port, p) {
+    21:   return new Promise(function (resolve, reject) {
+    22:     const q = http.get({ host: '127.0.0.1', port: port, path: p, agent: false }, function (r) {
+  --
+    19: 
+    20: function get(port, p) {
+>   21:   return new Promise(function (resolve, reject) {
+    22:     const q = http.get({ host: '127.0.0.1', port: port, path: p, agent: false }, function (r) {
+    23:       let b = '';
+  --
+    20: function get(port, p) {
+    21:   return new Promise(function (resolve, reject) {
+>   22:     const q = http.get({ host: '127.0.0.1', port: port, path: p, agent: false }, function (r) {
+    23:       let b = '';
+    24:       r.setEncoding('utf8');
+  --
+    23:       let b = '';
+    24:       r.setEncoding('utf8');
+>   25:       r.on('data', function (d) { b += d; });
+    26:       r.on('end', function () { resolve({ status: r.statusCode, body: b }); });
+    27:     });
+  --
+    24:       r.setEncoding('utf8');
+    25:       r.on('data', function (d) { b += d; });
+>   26:       r.on('end', function () { resolve({ status: r.statusCode, body: b }); });
+    27:     });
+    28:     q.on('error', reject);
+  --
+    27:     });
+    28:     q.on('error', reject);
+>   29:     q.setTimeout(5000, function () { q.destroy(new Error('timeout ' + p)); });
+    30:   });
+    31: }
+  --
+    31: }
+    32: 
+>   33: function copyInto(src, dst) {
+    34:   fs.mkdirSync(path.dirname(dst), { recursive: true });
+    35:   fs.copyFileSync(src, dst);
+  --
+    37: }
+    38: 
+>   39: function makeTmpRoot(v) {
+    40:   const t = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-s1-'));
+    41:   const rels = ['strategies/manifest.json', 'strategies/guard/manifest.json', 'strategies/guard11/manifest.json'];
+  --
+    40:   const t = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-s1-'));
+    41:   const rels = ['strategies/manifest.json', 'strategies/guard/manifest.json', 'strategies/guard11/manifest.json'];
+>   42:   v.rows.forEach(function (r) { if (r.rel) rels.push(r.rel); });
+    43:   rels.forEach(function (rl) {
+    44:     const s = path.join(ROOT, rl);
+  --
+    41:   const rels = ['strategies/manifest.json', 'strategies/guard/manifest.json', 'strategies/guard11/manifest.json'];
+    42:   v.rows.forEach(function (r) { if (r.rel) rels.push(r.rel); });
+>   43:   rels.forEach(function (rl) {
+    44:     const s = path.join(ROOT, rl);
+    45:     if (fs.existsSync(s)) copyInto(s, path.join(t, rl));
+  --
+    48: }
+    49: 
+>   50: function today() {
+    51:   const d = new Date();
+    52:   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  --
+    53: }
+    54: 
+>   55: function updateProgress(nChecks) {
+    56:   const f = path.join(ROOT, 'docs', 'progress.md');
+    57:   fs.mkdirSync(path.dirname(f), { recursive: true });
+  --
+    67: }
+    68: 
+>   69: R.run('S1.server', { root: ROOT, version: VERSION, envPath: A.envPath }, async function (rep) {
+    70:   rep.env('node', process.version);
+    71:   rep.env('engines', ENG.VERSION);
+  --
+    79:     rep.check('hash ' + r.id + ' (' + r.rel + ')', r.ok, r.err + ' got ' + String(r.got).slice(0, 12) + ' want ' + String(r.want).slice(0, 12));
+    80:   }
+>   81:   rep.data('hash table [id kind file want12 got12 result toolsCopy]', v.rows.map(function (r) {
+    82:     return [r.id, r.kind, r.rel, String(r.want).slice(0, 12), String(r.got).slice(0, 12), r.ok ? 'OK' : 'FAIL:' + r.err, r.src || '-'].join('  ');
+    83:   }).join('\n'));
+  --
+   107:       fs.writeFileSync(f1, b);
+   108:       const vt = ENG.verify(tmp), rt = row(vt, 'v1');
+>  109:       const nbad = vt.rows.filter(function (r) { return !r.ok; }).length;
+   110:       rep.check('1 byte changed in v1 -> rejected (only v1)', !vt.ok && rt && !rt.ok && nbad === 1, badList(vt));
+   111:       let msg = '';
+  --
+   123:       const vf = ENG.verify(tmp);
+   124:       rep.check('S000 reformatted (same params) still accepted', vf.ok, badList(vf));
+>  125:       const k = Object.keys(j.params || {}).filter(function (x) { return typeof j.params[x] === 'number'; })[0];
+   126:       if (k) {
+   127:         j.params[k] = j.params[k] + 1;
+  --
+   145:   // 4. server on a random port
+   146:   const S = SRV.create(ROOT);
+>  147:   await new Promise(function (res, rej) { S.srv.once('error', rej); S.srv.listen(0, '127.0.0.1', res); });
+   148:   const port = S.srv.address().port;
+   149:   try {
+  --
+   155:     const h = await get(port, '/');
+   156:     const ids = ['tab-main', 'tab-logic', 'tab-data', 'tab-sim', 'tab-release'];
+>  157:     const miss = ids.filter(function (i) { return h.body.indexOf('id="' + i + '"') < 0; });
+   158:     rep.check('GET / -> index.html with 5 tabs', h.status === 200 && miss.length === 0, 'status ' + h.status + ' missing ' + miss.join(','));
+   159:     const t = await get(port, '/..%2fstrategies%2fmanifest.json');
+  --
+   163:   } finally {
+   164:     try { S.srv.closeAllConnections(); } catch (e) { }
+>  165:     await new Promise(function (res) { S.srv.close(function () { res(); }); });
+   166:   }
+   167: 
+  --
+   166:   }
+   167: 
+>  168:   const allOk = rep.r.errors.length === 0 && rep.r.checks.every(function (c) { return c.ok; });
+   169:   if (allOk) { updateProgress(rep.r.checks.length); rep.note('docs/progress.md updated'); }
+   170: });
+  --
+== tools/ui/s2.cjs
+    16: let secrets = [], opts = {}, finished = false;
+    17: 
+>   18: function mask(s) { s = String(s); for (const x of secrets) if (x && x.length >= 6) s = s.split(x).join('***(len=' + x.length + ')'); return s; }
+    19: function chk(name, ok, info) { checks.push({ name, ok: !!ok, info: info ? mask(info) : '' }); return !!ok; }
+    20: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+  --
+    17: 
+    18: function mask(s) { s = String(s); for (const x of secrets) if (x && x.length >= 6) s = s.split(x).join('***(len=' + x.length + ')'); return s; }
+>   19: function chk(name, ok, info) { checks.push({ name, ok: !!ok, info: info ? mask(info) : '' }); return !!ok; }
+    20: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+    21: 
+  --
+    18: function mask(s) { s = String(s); for (const x of secrets) if (x && x.length >= 6) s = s.split(x).join('***(len=' + x.length + ')'); return s; }
+    19: function chk(name, ok, info) { checks.push({ name, ok: !!ok, info: info ? mask(info) : '' }); return !!ok; }
+>   20: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+    21: 
+    22: function ledger(r) {
+  --
+    20: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+    21: 
+>   22: function ledger(r) {
+    23:   const p = P('data', 'rest', 'ledger.csv');
+    24:   fs.mkdirSync(path.dirname(p), { recursive: true });
+  --
+    29: }
+    30: 
+>   31: function offlineRoundtrip() {
+    32:   const rows = [];
+    33:   let okT = 0, nT = 0, okD = 0, nD = 0, primT = null, primD = null;
+  --
+    49: }
+    50: 
+>   51: async function verifyTicks(cl) {
+    52:   const dir = P('data', 'ticks');
+    53:   const rows = [];
+  --
+    87: }
+    88: 
+>   89: async function verifyDaily(cl) {
+    90:   const dir = P('data', 'daily');
+    91:   const rows = [];
+  --
+   123: }
+   124: 
+>  125: async function fetchMode(cl) {
+   126:   const all = String(opts.codes || '').split(/[,\s;]+/).filter(Boolean);
+   127:   const good = all.filter(c => /^[0-9A-Z]{6}$/.test(c)), bad = all.filter(c => !/^[0-9A-Z]{6}$/.test(c));
+  --
+   162: }
+   163: 
+>  164: function finish(verdict) {
+   165:   if (finished) return;
+   166:   finished = true;
+  --
+   192: }
+   193: 
+>  194: async function main() {
+   195:   opts = JSON.parse(fs.readFileSync(OPT, 'utf8').replace(/^\uFEFF/, ''));
+   196:   opts.maxPages = opts.maxPages || 80;
+  --
+== tools/ui/s3.cjs
+    17: let secrets = [], opts = {}, finished = false;
+    18: 
+>   19: function mask(s) { s = String(s); for (const x of secrets) if (x && x.length >= 6) s = s.split(x).join('***(len=' + x.length + ')'); return s; }
+    20: function chk(name, ok, info) { checks.push({ name, ok: !!ok, info: info ? mask(info) : '' }); return !!ok; }
+    21: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+  --
+    18: 
+    19: function mask(s) { s = String(s); for (const x of secrets) if (x && x.length >= 6) s = s.split(x).join('***(len=' + x.length + ')'); return s; }
+>   20: function chk(name, ok, info) { checks.push({ name, ok: !!ok, info: info ? mask(info) : '' }); return !!ok; }
+    21: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+    22: const outF = (c, d) => P('data', 'rest', 'ticks', c + '_AL_120t_' + d + '.csv');
+  --
+    19: function mask(s) { s = String(s); for (const x of secrets) if (x && x.length >= 6) s = s.split(x).join('***(len=' + x.length + ')'); return s; }
+    20: function chk(name, ok, info) { checks.push({ name, ok: !!ok, info: info ? mask(info) : '' }); return !!ok; }
+>   21: function block(name, rows) { blocks.push({ name, rows: rows.map(mask) }); }
+    22: const outF = (c, d) => P('data', 'rest', 'ticks', c + '_AL_120t_' + d + '.csv');
+    23: 
+  --
+    22: const outF = (c, d) => P('data', 'rest', 'ticks', c + '_AL_120t_' + d + '.csv');
+    23: 
+>   24: function ledger(r) {
+    25:   const p = P('data', 'rest', 'ledger.csv');
+    26:   fs.mkdirSync(path.dirname(p), { recursive: true });
+  --
+    30: }
+    31: 
+>   32: function readSkip() {
+    33:   const s = new Set(), p = P('data', 'rest', 'ledger.csv');
+    34:   if (!fs.existsSync(p)) return s;
+  --
+    40: }
+    41: 
+>   42: function loadScreen() {
+    43:   const dir = P('data', 'screen');
+    44:   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /\.csv$/i.test(f)).sort() : [];
+  --
+    61: }
+    62: 
+>   63: function dateTable(perDate) {
+    64:   const L = ['date      need have skip | saved warmShort expired noBars trunc err'];
+    65:   for (const d of Object.keys(perDate).sort()) {
+  --
+    71: }
+    72: 
+>   73: async function parity(cl) {
+    74:   const f = P('data', 'ticks', '0011A0_AL_120t_20261102.csv');
+    75:   if (!fs.existsSync(f)) { chk('parity 0011A0', false, 'reference file missing: ' + f); return; }
+  --
+    81: }
+    82: 
+>   83: async function archive(cl, items, perDate, skip, today) {
+    84:   const work = items.map(it => ({ code: it.code, pend: it.dates.filter(d => d < today && !fs.existsSync(outF(it.code, d)) && !skip.has(it.code + '|' + d)) }))
+    85:     .filter(w => w.pend.length)
+  --
+   158: }
+   159: 
+>  160: function finish(verdict, extra) {
+   161:   if (finished) return;
+   162:   finished = true;
+  --
+   187: }
+   188: 
+>  189: async function main() {
+   190:   opts = JSON.parse(fs.readFileSync(OPT, 'utf8').replace(/^\uFEFF/, ''));
+   191:   const today = kstDate(Date.now());
+  --
+== tools/ui/s4_causal.cjs
+    26: const avg = arr => { const v = arr.filter(x => isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN; };
+    27: 
+>   28: function report(verdict, err) {
+    29:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    30:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    48: 
+    49: // ---- copied from s4_entryq.cjs ----
+>   50: function stats(tr) {
+    51:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    52:   for (const t of tr) {
+  --
+    56:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    57: }
+>   58: function parseCsv(text) {
+    59:   text = text.replace(/^\uFEFF/, '');
+    60:   const rows = []; let row = [], f = '', q = false;
+  --
+    70:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    71: }
+>   72: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    73: function stamp(ts, ds) {
+    74:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    71: }
+    72: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   73: function stamp(ts, ds) {
+    74:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    75:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    82:   return null;
+    83: }
+>   84: function loadTicksText(text) {
+    85:   const rows = parseCsv(text);
+    86:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   108:   return bars;
+   109: }
+>  110: function loadDaily2(dailyDir, code, date, warn) {
+   111:   const f = path.join(dailyDir, code + '.csv');
+   112:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   124: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   125: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  126: function sameTr(a, b, off) {
+   127:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   128:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   134:   return null;
+   135: }
+>  136: function sameCnt(a, b) {
+   137:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   138:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   140: }
+   141: const DCACHE = new Map();
+>  142: function dayClose(dailyDir, code, date) {
+   143:   let m = DCACHE.get(code);
+   144:   if (!m) {
+  --
+   152:   return m.get(date) || null;
+   153: }
+>  154: function findCapCsv() {
+   155:   const a = A('csv'); if (a) return path.resolve(a);
+   156:   const cand = [], walk = (d, depth) => {
+  --
+   174: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+   175: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  176: function loadCap(f) {
+   177:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   178:   for (const r of rows.slice(1)) {
+  --
+   191: // ---- end copy ----
+   192: 
+>  193: function main() {
+   194:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   195:   const MINW = Number(A('minWarm') || 400), EXCL = new Set(list(A('excl') || '20261021,20261028'));
+  --
+== tools/ui/s4_chart.cjs
+    26: const avg = arr => { const v = arr.filter(x => isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN; };
+    27: 
+>   28: function report(verdict, err) {
+    29:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    30:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    48: 
+    49: // ---- copied from s4_entryq.cjs ----
+>   50: function stats(tr) {
+    51:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    52:   for (const t of tr) {
+  --
+    56:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    57: }
+>   58: function parseCsv(text) {
+    59:   text = text.replace(/^\uFEFF/, '');
+    60:   const rows = []; let row = [], f = '', q = false;
+  --
+    70:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    71: }
+>   72: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    73: function stamp(ts, ds) {
+    74:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    71: }
+    72: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   73: function stamp(ts, ds) {
+    74:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    75:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    82:   return null;
+    83: }
+>   84: function loadTicksText(text) {
+    85:   const rows = parseCsv(text);
+    86:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   108:   return bars;
+   109: }
+>  110: function loadDaily2(dailyDir, code, date, warn) {
+   111:   const f = path.join(dailyDir, code + '.csv');
+   112:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   124: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   125: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  126: function sameTr(a, b, off) {
+   127:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   128:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   134:   return null;
+   135: }
+>  136: function sameCnt(a, b) {
+   137:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   138:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   140: }
+   141: const DCACHE = new Map();
+>  142: function dayClose(dailyDir, code, date) {
+   143:   let m = DCACHE.get(code);
+   144:   if (!m) {
+  --
+   152:   return m.get(date) || null;
+   153: }
+>  154: function findCapCsv() {
+   155:   const a = A('csv'); if (a) return path.resolve(a);
+   156:   const cand = [], walk = (d, depth) => {
+  --
+   174: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+   175: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  176: function loadCap(f) {
+   177:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   178:   for (const r of rows.slice(1)) {
+  --
+   191: // ---- end copy ----
+   192: 
+>  193: function main() {
+   194:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   195:   const MINW = Number(A('minWarm') || 400), EXCL = new Set(list(A('excl') || '20261021,20261028'));
+  --
+   412:   const OVL = [
+   413:     "      if (D.ov) {",
+>  414:     "        var O = D.ov, vl = function (ii, col, txt, dy) { if (ii == null || ii < v0 || ii >= v1) return; g.strokeStyle = col; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(ii), p.y); g.lineTo(X(ii), p.y + p.h); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '11px sans-serif'; g.te
+   415:     "        vl(O.capI, '#ffffff', 'CAP ' + O.capTxt, 28); vl(O.esI, '#ffdd00', 'ES ' + O.esTxt, 42);",
+   416:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.fo
+  --
+   414:     "        var O = D.ov, vl = function (ii, col, txt, dy) { if (ii == null || ii < v0 || ii >= v1) return; g.strokeStyle = col; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(ii), p.y); g.lineTo(X(ii), p.y + p.h); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '11px sans-serif'; g.te
+   415:     "        vl(O.capI, '#ffffff', 'CAP ' + O.capTxt, 28); vl(O.esI, '#ffdd00', 'ES ' + O.esTxt, 42);",
+>  416:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.fo
+   417:     "        g.font = '10px sans-serif'; g.textAlign = 'center';",
+   418:     "        D.marks.forEach(function (m) { if (m.i < v0 || m.i >= v1) return; if (m.k === 'rej' && m.why !== 'time') { g.fillStyle = REJ[m.why] || '#fff'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 15); } else if (m.k === 'exit') { g.fillStyle = '#ffcc66'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 36); 
+  --
+   416:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.fo
+   417:     "        g.font = '10px sans-serif'; g.textAlign = 'center';",
+>  418:     "        D.marks.forEach(function (m) { if (m.i < v0 || m.i >= v1) return; if (m.k === 'rej' && m.why !== 'time') { g.fillStyle = REJ[m.why] || '#fff'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 15); } else if (m.k === 'exit') { g.fillStyle = '#ffcc66'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 36); 
+   419:     "      }"].join('\n') + '\n';
+   420:   const RENDER = rsrc.replace(ANCH, ANCH + OVL);
+  --
+   491:   fs.writeFileSync(path.join(RDIR, 'detail', 'chart_cases.csv'), cc.join('\n') + '\n');
+   492:   sums.push('charts=' + path.join(outDir, 'index.html') + ' cases=' + cases.length + ' ind=' + srcInd + ' render.sha12=' + sha(rbuf).slice(0, 12));
+>  493:   data('HTS check bars (cap=capture bar, in-1=bar before entry, in=entry/signal bar, out=exit bar; amt in 1e8 KRW)', hts);
+   494:   }
+   495:   return chk.every(c => c.c) ? 'PASS' : 'FAIL';
+  --
+== tools/ui/s4_entryq.cjs
+    29: const avg = arr => { const v = arr.filter(x => isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN; };
+    30: 
+>   31: function report(verdict, err) {
+    32:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    33:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    51: 
+    52: // ---- copied from s4_target.cjs ----
+>   53: function stats(tr) {
+    54:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    55:   for (const t of tr) {
+  --
+    59:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    60: }
+>   61: function parseCsv(text) {
+    62:   text = text.replace(/^\uFEFF/, '');
+    63:   const rows = []; let row = [], f = '', q = false;
+  --
+    73:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    74: }
+>   75: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    76: function stamp(ts, ds) {
+    77:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    74: }
+    75: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   76: function stamp(ts, ds) {
+    77:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    78:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    85:   return null;
+    86: }
+>   87: function loadTicksText(text) {
+    88:   const rows = parseCsv(text);
+    89:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   111:   return bars;
+   112: }
+>  113: function loadDaily2(dailyDir, code, date, warn) {
+   114:   const f = path.join(dailyDir, code + '.csv');
+   115:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   127: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   128: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  129: function sameTr(a, b, off) {
+   130:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   131:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   137:   return null;
+   138: }
+>  139: function sameCnt(a, b) {
+   140:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   141:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   143: }
+   144: const DCACHE = new Map();
+>  145: function dayClose(dailyDir, code, date) {
+   146:   let m = DCACHE.get(code);
+   147:   if (!m) {
+  --
+   155:   return m.get(date) || null;
+   156: }
+>  157: function findCapCsv() {
+   158:   const a = A('csv'); if (a) return path.resolve(a);
+   159:   const cand = [], walk = (d, depth) => {
+  --
+   177: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+   178: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  179: function loadCap(f) {
+   180:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   181:   for (const r of rows.slice(1)) {
+  --
+   194: // ---- end copy ----
+   195: 
+>  196: function main() {
+   197:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   198:   const MINW = Number(A('minWarm') || 400), EXCL = A('excl') || '20261021';
+  --
+== tools/ui/s4_human.cjs
+    26: const avg = arr => { const v = arr.filter(x => isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN; };
+    27: 
+>   28: function report(verdict, err) {
+    29:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    30:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    48: 
+    49: // ---- copied from s4_entryq.cjs ----
+>   50: function stats(tr) {
+    51:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    52:   for (const t of tr) {
+  --
+    56:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    57: }
+>   58: function parseCsv(text) {
+    59:   text = text.replace(/^\uFEFF/, '');
+    60:   const rows = []; let row = [], f = '', q = false;
+  --
+    70:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    71: }
+>   72: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    73: function stamp(ts, ds) {
+    74:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    71: }
+    72: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   73: function stamp(ts, ds) {
+    74:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    75:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    82:   return null;
+    83: }
+>   84: function loadTicksText(text) {
+    85:   const rows = parseCsv(text);
+    86:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   108:   return bars;
+   109: }
+>  110: function loadDaily2(dailyDir, code, date, warn) {
+   111:   const f = path.join(dailyDir, code + '.csv');
+   112:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   124: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   125: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  126: function sameTr(a, b, off) {
+   127:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   128:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   134:   return null;
+   135: }
+>  136: function sameCnt(a, b) {
+   137:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   138:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   140: }
+   141: const DCACHE = new Map();
+>  142: function dayClose(dailyDir, code, date) {
+   143:   let m = DCACHE.get(code);
+   144:   if (!m) {
+  --
+   152:   return m.get(date) || null;
+   153: }
+>  154: function findCapCsv() {
+   155:   const a = A('csv'); if (a) return path.resolve(a);
+   156:   const cand = [], walk = (d, depth) => {
+  --
+   174: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+   175: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  176: function loadCap(f) {
+   177:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   178:   for (const r of rows.slice(1)) {
+  --
+   191: // ---- end copy ----
+   192: 
+>  193: function main() {
+   194:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   195:   const MINW = Number(A('minWarm') || 400), EXCL = new Set(list(A('excl') || '20261021,20261028'));
+  --
+   389:     r.runUp = (px / b[s].o - 1) * 100; r.maxPb = pb;
+   390:     let ph = -Infinity, phI = -1; for (let j = s; j < iI; j++) if (b[j].h >= ph) { ph = b[j].h; phI = j; }
+>  391:     r.phI = phI; r.offHigh = phI >= 0 ? (1 - px / ph) * 100 : NaN; r.minHigh = phI >= 0 ? (b[iI].t - b[phI].t) / 60 : NaN;
+   392:     let k2 = 0; for (let j = s; j <= iI; j++) if (b[j].o > 0 && (b[j].c / b[j].o - 1) * 100 >= 2) k2++; r.big2 = k2;
+   393:     const c3 = closeNBack(it.code, it.date, 3); r.rise3 = c3 > 0 ? (px / c3 - 1) * 100 : NaN;
+  --
+   406:     ['X4', 'today bars with body >= +2% count >= th', (r, v) => r.big2 >= v, 3, [2, 4]],
+   407:     ['X5', 'entry vs close 3 trading days ago >= th%', (r, v) => r.rise3 >= v, 20, [15, 25]],
+>  408:     ['H1', 'entry >= th% below prior day high, high >= 5 min old', (r, v) => r.offHigh >= v && r.minHigh >= 5, 1, [0.5, 1.5]],
+   409:     ['H3', 'chase vs capture px >= th%', (r, v) => r.chase >= v, 3, [2, 5]],
+   410:     ['H4k', 'gap at KRX open >= th%', (r, v) => r.gapK >= v, 5, [3, 10]],
+  --
+   434: 
+   435:   const losses = rows.filter(r => adj(r) < 0), wins = rows.filter(r => adj(r) >= 0), unexp = losses.filter(r => !r.tags.length);
+>  436:   const FK = ['clN', 'sigN', 'drift', 'momS', 'mom80', 'runUp', 'maxPb', 'offHigh', 'minHigh', 'big2', 'rise3', 'chase', 'gapK', 'gapF', 'delay'];
+   437:   const fl = ['feature   med_loss  med_win   (n loss=' + losses.length + ' win=' + wins.length + ')'];
+   438:   for (const f of FK) fl.push(f.padEnd(9) + pad(f2(med(losses.map(r => r[f]))), 10) + pad(f2(med(wins.map(r => r[f]))), 10));
+  --
+   450:       L.push(src + '  ' + String(q.hms).padStart(6, '0') + pad(q.c, 10) + '  ' + m.k.padEnd(6) + ' ' + String(m.why || '').padEnd(6) + pad(f2(ind.mom[m.i]), 8) + pad(f2(m80(b, m.i)), 8) + pad(f2(ind.n[m.i]), 11) + pad(ind.big[m.i] ? 1 : 0, 4));
+   451:     }
+>  452:     data('HTS check 0009K0 20261021 engine marks (arm/rej/entry) from day start; compare with HTS arrows 08:00:03, 08:06:03, 09:00', L);
+   453:   } else sums.push('0009K0 20261021 not in cap rows');
+   454:   const ul = ['code   date     in        adj    mfe  why            clN drift  momS mom80 runUp offHi  big2 rise3 chase'];
+  --
+   455:   for (const r of unexp.slice().sort((x, y) => adj(x) - adj(y)).slice(0, 60))
+   456:     ul.push(r.code.padEnd(6) + ' ' + r.date + ' ' + String(r.inHms).padStart(6, '0') + pad(fx(adj(r)), 8) + pad(f2(r.t.mfe), 6) + '  ' + String(r.t.why).padEnd(14) + pad(r.clN, 3) +
+>  457:       pad(f2(r.drift), 6) + pad(f2(r.momS), 6) + pad(f2(r.mom80), 6) + pad(f2(r.runUp), 6) + pad(f2(r.offHigh), 6) + pad(r.big2, 5) + pad(f2(r.rise3), 6) + pad(f2(r.chase), 6));
+   458:   data('unexplained losses (no tag), worst 60', ul);
+   459: 
+  --
+   471:   const OVL = [
+   472:     "      if (D.ov) {",
+>  473:     "        var O = D.ov, vl = function (ii, col, txt, dy) { if (ii == null || ii < v0 || ii >= v1) return; g.strokeStyle = col; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(ii), p.y); g.lineTo(X(ii), p.y + p.h); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '11px sans-serif'; g.te
+   474:     "        vl(O.capI, '#ffffff', 'CAP ' + O.capTxt, 28); vl(O.esI, '#ffdd00', 'ES ' + O.esTxt, 42);",
+   475:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.fo
+  --
+   473:     "        var O = D.ov, vl = function (ii, col, txt, dy) { if (ii == null || ii < v0 || ii >= v1) return; g.strokeStyle = col; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(ii), p.y); g.lineTo(X(ii), p.y + p.h); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '11px sans-serif'; g.te
+   474:     "        vl(O.capI, '#ffffff', 'CAP ' + O.capTxt, 28); vl(O.esI, '#ffdd00', 'ES ' + O.esTxt, 42);",
+>  475:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.fo
+   476:     "        g.font = '10px sans-serif'; g.textAlign = 'center';",
+   477:     "        D.marks.forEach(function (m) { if (m.i < v0 || m.i >= v1) return; if (m.k === 'rej' && m.why !== 'time') { g.fillStyle = REJ[m.why] || '#fff'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 15); } else if (m.k === 'exit') { g.fillStyle = '#ffcc66'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 36); 
+  --
+   475:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.fo
+   476:     "        g.font = '10px sans-serif'; g.textAlign = 'center';",
+>  477:     "        D.marks.forEach(function (m) { if (m.i < v0 || m.i >= v1) return; if (m.k === 'rej' && m.why !== 'time') { g.fillStyle = REJ[m.why] || '#fff'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 15); } else if (m.k === 'exit') { g.fillStyle = '#ffcc66'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 36); 
+   478:     "      }"].join('\n') + '\n';
+   479:   const RENDER = rsrc.replace(ANCH, ANCH + OVL);
+  --
+   512:       ['entry', tm(bars[t.inI].hms) + ' ' + t.inPx], ['exit', tm(bars[t.outI].hms) + ' ' + g2(t.outPx, 1) + ' ' + t.why], ['adj', fx(adj(r))], ['mfe/mae', fx(t.mfe) + ' / ' + fx(t.mae)],
+   513:       ['sig/cluster', r.sigN + ' / ' + r.clN], ['sig1', r.fsI >= 0 ? tm(bars[r.fsI].hms) + ' ' + bars[r.fsI].c : '-'], ['drift', fx(r.drift)], ['momS/m80', g2(r.momS, 1) + ' / ' + g2(r.mom80, 1)],
+>  514:       ['runUp/maxPb', fx(r.runUp) + ' / ' + g2(r.maxPb, 2)], ['offHigh/min', g2(r.offHigh, 2) + ' / ' + g2(r.minHigh, 1)], ['big2', r.big2], ['rise3', fx(r.rise3)], ['chase', fx(r.chase)],
+   515:       ['gapK/gapF', fx(r.gapK) + ' / ' + fx(r.gapF)], ['NXT', r.nxt ? 'Y' : 'N']];
+   516:     let tb = '<table>'; for (let q = 0; q < info.length; q += 10) { const s = info.slice(q, q + 10); tb += '<tr>' + s.map(x => '<th>' + x[0] + '</th>').join('') + '</tr><tr>' + s.map(x => '<td>' + x[1] + '</td>').join('') + '</tr>'; } tb += '</table>';
+  --
+   539:     rv.push([r.code, r.date, r.inHms, f4(adj(r)), f4(r.t.mfe), r.t.why, r.tags.join('|'), fmap[kk(r)] || '', p ? p.h : '', p ? p.why : ''].join(',')); }
+   540:   fs.writeFileSync(rf, '\uFEFF' + rv.join('\r\n') + '\r\n', 'utf8');
+>  541:   const fc = ['code,date,half,inHms,adj,mfe,why,tags,sigN,clN,drift,momS,mom80,runUp,maxPb,offHigh,minHigh,big2,rise3,chase,gapK,gapF,nxt'];
+   542:   for (const r of rows) fc.push([r.code, r.date, r.half, r.inHms, f4(adj(r)), f4(r.t.mfe), r.t.why, r.tags.join('|'), r.sigN, r.clN, f4(r.drift), f4(r.momS), f4(r.mom80), f4(r.runUp), f4(r.maxPb), f4(r.offHigh), f4(r.minHigh), r.big2, f4(r.rise3), f4(r.chase), f4(r.gapK), f4(r.gapF), r.nxt ? 1 : 0].
+   543:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+  --
+   540:   fs.writeFileSync(rf, '\uFEFF' + rv.join('\r\n') + '\r\n', 'utf8');
+   541:   const fc = ['code,date,half,inHms,adj,mfe,why,tags,sigN,clN,drift,momS,mom80,runUp,maxPb,offHigh,minHigh,big2,rise3,chase,gapK,gapF,nxt'];
+>  542:   for (const r of rows) fc.push([r.code, r.date, r.half, r.inHms, f4(adj(r)), f4(r.t.mfe), r.t.why, r.tags.join('|'), r.sigN, r.clN, f4(r.drift), f4(r.momS), f4(r.mom80), f4(r.runUp), f4(r.maxPb), f4(r.offHigh), f4(r.minHigh), r.big2, f4(r.rise3), f4(r.chase), f4(r.gapK), f4(r.gapF), r.nxt ? 1 : 0].
+   543:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   544:   fs.writeFileSync(path.join(RDIR, 'detail', 'human_rows.csv'), fc.join('\n') + '\n');
+  --
+== tools/ui/s4_period.cjs
+    23: const pad = (s, n) => String(s).padStart(n);
+    24: 
+>   25: function report(verdict, err) {
+    26:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    27:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    45: 
+    46: // ---- copied from s4_warmup.cjs (copied from sz-lab-guard11.cjs) ----
+>   47: function stats(tr) {
+    48:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    49:   for (const t of tr) {
+  --
+    53:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    54: }
+>   55: function parseCsv(text) {
+    56:   text = text.replace(/^\uFEFF/, '');
+    57:   const rows = []; let row = [], f = '', q = false;
+  --
+    67:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    68: }
+>   69: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    70: function stamp(ts, ds) {
+    71:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    68: }
+    69: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   70: function stamp(ts, ds) {
+    71:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    72:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    79:   return null;
+    80: }
+>   81: function loadTicksText(text) {
+    82:   const rows = parseCsv(text);
+    83:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   105:   return bars;
+   106: }
+>  107: function loadDaily2(dailyDir, code, date, warn) {
+   108:   const f = path.join(dailyDir, code + '.csv');
+   109:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   121: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   122: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  123: function sameTr(a, b, off) {
+   124:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   125:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   131:   return null;
+   132: }
+>  133: function sameCnt(a, b) {
+   134:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   135:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   139: 
+   140: const DCACHE = new Map();
+>  141: function dayClose(dailyDir, code, date) {
+   142:   let m = DCACHE.get(code);
+   143:   if (!m) {
+  --
+   151:   return m.get(date) || null;
+   152: }
+>  153: function findCapCsv() {
+   154:   const a = A('csv'); if (a) return path.resolve(a);
+   155:   const cand = [], walk = (d, depth) => {
+  --
+   171:   return '';
+   172: }
+>  173: function loadCap(f) {
+   174:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(); let bad = 0;
+   175:   for (const r of rows.slice(1)) {
+  --
+   185: }
+   186: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+>  187: function tickMfe(it, cp) {
+   188:   const capT = toT(it.date, cp.hms); let h60 = 0, hD = 0;
+   189:   for (let j = it.start; j < it.bars.length; j++) {
+  --
+   193:   return { m60: h60 > 0 ? (h60 / cp.px - 1) * 100 : NaN, mD: hD > 0 ? (hD / cp.px - 1) * 100 : NaN };
+   194: }
+>  195: function grepFile(rel, re, max) {
+   196:   const f = path.join(ROOT, rel); if (!fs.existsSync(f)) return [rel + ': missing'];
+   197:   const L = fs.readFileSync(f, 'utf8').split(/\r?\n/), out = [];
+  --
+   200: }
+   201: 
+>  202: function main() {
+   203:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   204:   const REF = Number(A('ref') || 800), MINW = Number(A('minWarm') || 400);
+  --
+   392: 
+   393:   data('probe_v1_mfe', grepFile('strategies/engines/v1.cjs', /mfe|mae/, 25));
+>  394:   data('probe_guard11_wiring', grepFile('tools/sz-lab-guard11.cjs', /require\(|makeHook|E3\.simulate|runPortfolio|GP0|hooks|G11/, 45).concat(grepFile('tools/sz-guard11.cjs', /module\.exports|function makeHook|VERSION/, 10)));
+   395:   if (exL.length) data('excluded (max 20)', exL);
+   396: 
+  --
+== tools/ui/s4_target.cjs
+    28: const pad = (s, n) => String(s).padStart(n);
+    29: 
+>   30: function report(verdict, err) {
+    31:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    32:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    50: 
+    51: // ---- copied from s4_period.cjs (loaders copied from sz-lab-guard11.cjs) ----
+>   52: function stats(tr) {
+    53:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    54:   for (const t of tr) {
+  --
+    58:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    59: }
+>   60: function parseCsv(text) {
+    61:   text = text.replace(/^\uFEFF/, '');
+    62:   const rows = []; let row = [], f = '', q = false;
+  --
+    72:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    73: }
+>   74: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    75: function stamp(ts, ds) {
+    76:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    73: }
+    74: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   75: function stamp(ts, ds) {
+    76:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    77:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    84:   return null;
+    85: }
+>   86: function loadTicksText(text) {
+    87:   const rows = parseCsv(text);
+    88:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   110:   return bars;
+   111: }
+>  112: function loadDaily2(dailyDir, code, date, warn) {
+   113:   const f = path.join(dailyDir, code + '.csv');
+   114:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   126: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   127: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  128: function sameTr(a, b, off) {
+   129:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   130:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   136:   return null;
+   137: }
+>  138: function sameCnt(a, b) {
+   139:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   140:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   142: }
+   143: const DCACHE = new Map();
+>  144: function dayClose(dailyDir, code, date) {
+   145:   let m = DCACHE.get(code);
+   146:   if (!m) {
+  --
+   154:   return m.get(date) || null;
+   155: }
+>  156: function findCapCsv() {
+   157:   const a = A('csv'); if (a) return path.resolve(a);
+   158:   const cand = [], walk = (d, depth) => {
+  --
+   175: }
+   176: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+>  177: function tickMfe(it, cp) {
+   178:   const capT = toT(it.date, cp.hms); let h60 = 0, hD = 0;
+   179:   for (let j = it.start; j < it.bars.length; j++) {
+  --
+   187: // fixed: csv percent cells look like "+3.24%" and "+0.87% @ 10:05"
+   188: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  189: function loadCap(f) {
+   190:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   191:   for (const r of rows.slice(1)) {
+  --
+   203: }
+   204: 
+>  205: function main() {
+   206:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   207:   const REF = Number(A('ref') || 800), MINW = Number(A('minWarm') || 400);
+  --
+== tools/ui/s4_warmup.cjs
+    24: const pad = (s, n) => String(s).padStart(n);
+    25: 
+>   26: function report(verdict, err) {
+    27:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+    28:   const L = [], pass = chk.filter(c => c.c).length;
+  --
+    46: 
+    47: // ---- copied from sz-lab-guard11.cjs ----
+>   48: function stats(tr) {
+    49:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+    50:   for (const t of tr) {
+  --
+    54:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+    55: }
+>   56: function parseCsv(text) {
+    57:   text = text.replace(/^\uFEFF/, '');
+    58:   const rows = []; let row = [], f = '', q = false;
+  --
+    68:   return rows.filter(r => r.length > 1 || r[0] !== '');
+    69: }
+>   70: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+    71: function stamp(ts, ds) {
+    72:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  --
+    69: }
+    70: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+>   71: function stamp(ts, ds) {
+    72:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+    73:   if (t.length >= 14) return t.slice(0, 14);
+  --
+    80:   return null;
+    81: }
+>   82: function loadTicksText(text) {
+    83:   const rows = parseCsv(text);
+    84:   if (rows.length < 2) throw new Error('empty csv');
+  --
+   106:   return bars;
+   107: }
+>  108: function loadDaily2(dailyDir, code, date, warn) {
+   109:   const f = path.join(dailyDir, code + '.csv');
+   110:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  --
+   124: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   125: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+>  126: function sameTr(a, b, off) {
+   127:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   128:   for (let k = 0; k < a.trades.length; k++) {
+  --
+   134:   return null;
+   135: }
+>  136: function sameCnt(a, b) {
+   137:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+   138:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  --
+   139:   return null;
+   140: }
+>  141: function indDiff(a, b, start, N, off) {
+   142:   let safe = 0, stDir = 0, sig = 0, ema = 0;
+   143:   for (let j = start; j < N; j++) {
+  --
+   151: }
+   152: 
+>  153: function main() {
+   154:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   155:   const REF = Number(A('ref') || 800);
+  --
+== tools/ui/server.cjs
+     9:   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
+    10: 
+>   11: function status(root) {
+    12:   const v = ENG.verify(root);
+    13:   let versions = {}, loadErr = '';
+  --
+    14:   if (v.ok) { try { versions = ENG.load(root).versions; } catch (e) { loadErr = e.message; } }
+    15:   else {
+>   16:     loadErr = 'loading blocked: ' + v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + ' ' + r.err; })
+    17:       .concat(v.missing.map(function (m) { return m + ' missing'; })).join('; ');
+    18:   }
+  --
+    15:   else {
+    16:     loadErr = 'loading blocked: ' + v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + ' ' + r.err; })
+>   17:       .concat(v.missing.map(function (m) { return m + ' missing'; })).join('; ');
+    18:   }
+    19:   const rows = v.rows.map(function (r) {
+  --
+    17:       .concat(v.missing.map(function (m) { return m + ' missing'; })).join('; ');
+    18:   }
+>   19:   const rows = v.rows.map(function (r) {
+    20:     return { id: r.id, kind: r.kind, file: r.rel, want: String(r.want).slice(0, 12), got: String(r.got).slice(0, 12), ok: r.ok, err: r.err, src: r.src || '' };
+    21:   });
+  --
+    20:     return { id: r.id, kind: r.kind, file: r.rel, want: String(r.want).slice(0, 12), got: String(r.got).slice(0, 12), ok: r.ok, err: r.err, src: r.src || '' };
+    21:   });
+>   22:   const passed = rows.filter(function (r) { return r.ok; }).length;
+    23:   const ok = v.ok && !loadErr;
+    24:   return { server: VERSION, engines: ENG.VERSION, node: process.version, root: root, time: new Date().toISOString(),
+  --
+    27: }
+    28: 
+>   29: function send(res, code, type, body) {
+    30:   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    31:   res.end(body);
+  --
+    32: }
+    33: 
+>   34: function create(root) {
+    35:   root = path.resolve(root);
+    36:   const uiDir = path.join(root, 'ui');
+  --
+    35:   root = path.resolve(root);
+    36:   const uiDir = path.join(root, 'ui');
+>   37:   const srv = http.createServer(function (req, res) {
+    38:     let u;
+    39:     try { u = new URL(req.url, 'http://127.0.0.1'); } catch (e) { return send(res, 400, MIME['.txt'], 'bad url'); }
+  --
+    47:     const f = path.normalize(path.join(uiDir, p));
+    48:     if (f.indexOf(uiDir + path.sep) !== 0) return send(res, 403, MIME['.txt'], 'forbidden');
+>   49:     fs.readFile(f, function (err, buf) {
+    50:       if (err) return send(res, 404, MIME['.txt'], 'not found');
+    51:       send(res, 200, MIME[path.extname(f).toLowerCase()] || 'application/octet-stream', buf);
+  --
+    52:     });
+    53:   });
+>   54:   return { srv: srv, status: function () { return status(root); } };
+    55: }
+    56: 
+  --
+    55: }
+    56: 
+>   57: module.exports = { VERSION: VERSION, create: create, status: status };
+    58: 
+    59: if (require.main === module) {
+  --
+    61:   const port = +process.argv[3] || 3100;
+    62:   const s = create(root);
+>   63:   s.srv.on('error', function (e) {
+    64:     console.error('SERVER ERROR ' + e.message + (e.code === 'EADDRINUSE' ? ' (port in use: close the other server or use -Port 3101)' : ''));
+    65:     process.exit(1);
+  --
+    65:     process.exit(1);
+    66:   });
+>   67:   s.srv.listen(port, '127.0.0.1', function () {
+    68:     const st = s.status();
+    69:     console.log('mom-trader UI  http://127.0.0.1:' + port + '/   engines ' + (st.ok ? 'OK ' + st.passed + '/' + st.total : 'BLOCKED'));
+  --
+#END

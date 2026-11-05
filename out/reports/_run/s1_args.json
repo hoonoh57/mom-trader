@@ -1,0 +1,6 @@
+{
+    "root":  "E:\\parent\\projects\\rea\\projects\\mom-trader",
+    "envPath":  "E:\\parent\\security\\.env",
+    "psVersion":  "5.1.26100.9818",
+    "wrapper":  "30_server.ps1"
+}

@@ -1,0 +1,80 @@
+    1: 'use strict';
+    2: // archive-1.0: screen CSV -> stock-day list -> one backward ka10079 fetch per code -> per-date files via kiwoom-fetch buildTick
+    3: const K = require('./kiwoom-fetch.cjs');
+    4: const VERSION = 'archive-1.0';
+    5: const ST_OK = '\uC815\uC0C1';
+    6: const asList = x => (Array.isArray(x) ? x : (x && typeof x === 'object' ? [x] : []));
+    7: 
+    8: function decode(buf) {
+    9:   if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) return { text: buf.slice(3).toString('utf8'), enc: 'utf8-bom' };
+   10:   try { return { text: new TextDecoder('utf-8', { fatal: true }).decode(buf), enc: 'utf8' }; } catch (e) { /* not utf8 */ }
+   11:   return { text: new TextDecoder('euc-kr').decode(buf), enc: 'cp949' };
+   12: }
+   13: 
+   14: function splitCsvLine(s) {
+   15:   const out = []; let cur = '', q = false;
+   16:   for (let i = 0; i < s.length; i++) {
+   17:     const ch = s[i];
+   18:     if (q) { if (ch === '"') { if (s[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+   19:     else if (ch === '"') q = true;
+   20:     else if (ch === ',') { out.push(cur); cur = ''; }
+   21:     else cur += ch;
+   22:   }
+   23:   out.push(cur);
+   24:   return out;
+   25: }
+   26: 
+   27: // columns by position: 1 time, 2 date, 3 code, 4 name, 7 status
+   28: function parseScreen(text) {
+   29:   const lines = text.split(/\r\n|\n|\r/);
+   30:   const header = splitCsvLine(lines[0] || '').map(s => s.trim());
+   31:   const ok = header.length >= 8 && header[3] === 'code' && header[4] === 'name';
+   32:   const st = { total: 0, byStatus: {}, badCode: 0, badDate: 0, minDate: '', maxDate: '' };
+   33:   const rows = [];
+   34:   if (!ok) return { ok, header, rows, st };
+   35:   for (let i = 1; i < lines.length; i++) {
+   36:     const s = lines[i];
+   37:     if (!s.trim()) continue;
+   38:     const c = splitCsvLine(s);
+   39:     st.total++;
+   40:     const date = (c[2] || '').trim(), status = (c[7] || '').trim();
+   41:     let code = (c[3] || '').trim();
+   42:     if (code.length === 7 && code[0] === 'A') code = code.slice(1);
+   43:     st.byStatus[status] = (st.byStatus[status] || 0) + 1;
+   44:     if (!/^\d{8}$/.test(date)) { st.badDate++; continue; }
+   45:     if (!/^[0-9A-Z]{6}$/.test(code)) { st.badCode++; continue; }
+   46:     if (!st.minDate || date < st.minDate) st.minDate = date;
+   47:     if (date > st.maxDate) st.maxDate = date;
+   48:     rows.push({ date, code, ok: status === ST_OK, time: (c[1] || '').trim() });
+   49:   }
+   50:   return { ok, header, rows, st };
+   51: }
+   52: 
+   53: function planItems(rows, since, until) {
+   54:   const m = new Map();
+   55:   for (const r of rows) {
+   56:     if (!r.ok || r.date < since || r.date > until) continue;
+   57:     if (!m.has(r.code)) m.set(r.code, new Set());
+   58:     m.get(r.code).add(r.date);
+   59:   }
+   60:   const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+   61:   return [...m].map(([code, s]) => ({ code, dates: [...s].sort() }))
+   62:     .sort((a, b) => cmp(a.dates[0], b.dates[0]) || cmp(a.code, b.code));
+   63: }
+   64: 
+   65: // same stop rule as 09 (prev bars before 'oldest' >= warmup), market AL, scope 120
+   66: async function fetchBack(cl, q) {
+   67:   const rows = [];
+   68:   let next = '', end = '', bad = 0, pages = 0, prevN = 0;
+   69:   for (let page = 1; page <= q.maxPages; page++) {
+   70:     pages = page;
+   71:     const r = await cl.chart('ka10079', { stk_cd: q.code + '_AL', tic_scope: '120', upd_stkpc_tp: '1' }, page > 1 ? next : '');
+   72:     const rc = String(r.json.return_code);
+   73:     if (rc !== '0') throw new Error('ka10079 return_code=' + rc + ' msg=' + r.json.return_msg);
+   74:     const chunk = asList(r.json.stk_tic_chart_qry);
+   75:     if (!chunk.length) { end = 'empty'; break; }
+   76:     for (const it of chunk) { const row = K.tickRow(it); if (row) { rows.push(row); if (row.date < q.oldest) prevN++; } else bad++; }
+   77:     if (prevN >= q.warmup) { end = 'warmup'; break; }
+   78:     const cont = r.headers.get('cont-yn') || '', nk = r.headers.get('next-key') || '';
+   79:     if (cont.toUpperCase() !== 'Y' || !nk) { end = 'cont_end(' + cont + ')'; break; }
+   80:     next = nk;

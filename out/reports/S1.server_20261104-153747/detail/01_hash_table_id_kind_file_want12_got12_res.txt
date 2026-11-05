@@ -1,0 +1,7 @@
+v1  engine  strategies/engines/v1.cjs  921bdbc3319c  921bdbc3319c  OK  same
+risk1  engine  strategies/engines/risk1.cjs  b843afa96c92  b843afa96c92  OK  same
+v3  engine  strategies/engines/v3.cjs  9fa7da1b1b10  9fa7da1b1b10  OK  same
+guard-1.0  guard  tools/sz-guard.cjs  19607cabd0a2  19607cabd0a2  OK  -
+guard-1.1  guard  tools/sz-guard11.cjs  73d188febcf9  73d188febcf9  OK  -
+S000  frozen  strategies/frozen/S000.json  3388119b754c  3388119b754c  OK  -
+R000  frozen  strategies/frozen/R000.json  9f3115736d0c  9f3115736d0c  OK  -

@@ -1,0 +1,198 @@
+    1: (function (root, factory) {
+    2:   if (typeof module === 'object' && module.exports) module.exports = factory();
+    3:   else root.SZ = factory();
+    4: })(typeof self !== 'undefined' ? self : this, function () {
+    5:   'use strict';
+    6:   const RULES = ['hold', 'immediate', 'macd_zero', 'macd_sig', 'supertrend', 'trail'];
+    7:   const DEFAULTS = { MomLen: 50, SafeTh: 100, SafeExitTh: 100, SafeConfirm: 1, P1: 7, P2: 14, P3: 5,
+    8:     StrongA: 1e9, BigMode: 'abs', BigTh: 5e7, RelWin: 20, RelK: 3, BigNeedUp: 1, BigNeedST: 1,
+    9:     ArmSkip: 1, ArmSameSession: 1, EmaLen: 200, StLen: 14, StMult: 1.5, TickScope: 120, TickK: 1.0, TickAbs: 0,
+   10:     DispMax: 112, DispUntil: 1000, LimPct: 29, SurgePct: 25, LimMode: 'pullback', SurgeMode: 'pullback', PbPct: 5,
+   11:     EntryStart: 900, EntryEnd: 1520, ExitTime: 1520, SessionStartMax: 905,
+   12:     TargetPct: 5, StopPct: 3, TrailPct: 2,
+   13:     SafeBelow: 'hold', SafeAbove: 'hold', UnsafeBelow: 'macd_sig', UnsafeAbove: 'immediate',
+   14:     FeePct: 0.25, SlipPct: 0, MaxTrades: 10, ArmMode: 'state', SafeNoLoss: 1, SafeMinPct: 0, ReentryGap: 0, Match: '_AL_120t_', Date: '' };
+   15: 
+   16:   function validate(P) {
+   17:     for (const k of ['SafeBelow', 'SafeAbove', 'UnsafeBelow', 'UnsafeAbove'])
+   18:       if (RULES.indexOf(P[k]) < 0) throw new Error(k + ' invalid: ' + P[k] + ' (use ' + RULES.join('/') + ')');
+   19:     for (const k of ['LimMode', 'SurgeMode'])
+   20:       if (['off', 'block', 'pullback'].indexOf(P[k]) < 0) throw new Error(k + ' invalid: ' + P[k]);
+   21:     if (['abs', 'rel', 'both'].indexOf(P.BigMode) < 0) throw new Error('BigMode invalid: ' + P.BigMode);
+   22:     for (const k of ['MomLen', 'P1', 'P2', 'P3', 'EmaLen', 'StLen', 'RelWin', 'TickScope', 'SafeConfirm'])
+   23:       if (!(Number(P[k]) >= 1)) throw new Error(k + ' must be >= 1');
+   24:   }
+   25:   function prep(P0) {
+   26:     const P = Object.assign({}, DEFAULTS, P0 || {});
+   27:     validate(P);
+   28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;
+   29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;
+   30:     return P;
+   31:   }
+   32:   function ema(src, len) {
+   33:     const a = 2 / (len + 1), out = new Array(src.length); let prev = null;
+   34:     for (let i = 0; i < src.length; i++) {
+   35:       const x = src[i];
+   36:       if (x == null || !isFinite(x)) { out[i] = prev; continue; }
+   37:       prev = prev == null ? x : prev + a * (x - prev); out[i] = prev;
+   38:     }
+   39:     return out;
+   40:   }
+   41:   function supertrend(bars, period, mult) {
+   42:     const n = bars.length, line = new Array(n).fill(null), dir = new Array(n).fill(0);
+   43:     let atr = null, trSum = 0, fu = null, fl = null, d = 1;
+   44:     for (let i = 0; i < n; i++) {
+   45:       const b = bars[i], pc = i > 0 ? bars[i - 1].c : b.c;
+   46:       const tr = Math.max(b.h - b.l, Math.abs(b.h - pc), Math.abs(b.l - pc));
+   47:       if (i < period) { trSum += tr; if (i < period - 1) continue; atr = trSum / period; }
+   48:       else atr = (atr * (period - 1) + tr) / period;
+   49:       const hl2 = (b.h + b.l) / 2, bu = hl2 + mult * atr, bl = hl2 - mult * atr;
+   50:       if (fu == null) { fu = bu; fl = bl; d = b.c >= hl2 ? 1 : -1; }
+   51:       else {
+   52:         const pcl = bars[i - 1].c;
+   53:         fu = (bu < fu || pcl > fu) ? bu : fu;
+   54:         fl = (bl > fl || pcl < fl) ? bl : fl;
+   55:         if (d === 1 && b.c < fl) d = -1; else if (d === -1 && b.c > fu) d = 1;
+   56:       }
+   57:       line[i] = d === 1 ? fl : fu; dir[i] = d;
+   58:     }
+   59:     return { line, dir };
+   60:   }
+   61:   function compute(bars, P) {
+   62:     const N = bars.length, c = bars.map(b => b.c);
+   63:     const mom = new Array(N).fill(null);
+   64:     for (let i = P.MomLen; i < N; i++) { const r = c[i - P.MomLen]; mom[i] = r > 0 ? c[i] / r * 100 : null; }
+   65:     const e1 = ema(c, P.P1), e2 = ema(c, P.P2);
+   66:     const n = c.map((x, i) => (e1[i] - e2[i]) / x * 100);
+   67:     const sig = ema(n, P.P3);
+   68:     const emaL = ema(c, P.EmaLen);
+   69:     const st = supertrend(bars, P.StLen, P.StMult);
+   70:     const amt = bars.map(b => (b.o + b.h + b.l + b.c) / 4 * b.v);
+   71:     const taamt = new Array(N), dayStart = new Array(N);
+   72:     let d = null, cum = 0, ds = 0;
+   73:     for (let i = 0; i < N; i++) {
+   74:       if (bars[i].d !== d) { d = bars[i].d; cum = 0; ds = i; }
+   75:       cum += amt[i]; taamt[i] = cum; dayStart[i] = ds;
+   76:     }
+   77:     const big = new Array(N).fill(false); let win = 0;
+   78:     for (let i = 0; i < N; i++) {
+   79:       let rel = false;
+   80:       if (i >= P.RelWin) rel = amt[i] >= P.RelK * (win / P.RelWin);
+   81:       const abs = amt[i] >= P.BigTh;
+   82:       big[i] = P.BigMode === 'abs' ? abs : P.BigMode === 'rel' ? rel : (abs && rel);
+   83:       win += amt[i]; if (i >= P.RelWin) win -= amt[i - P.RelWin];
+   84:     }
+   85:     const cnt1 = new Array(N), thr = new Array(N), tickOk = new Array(N);
+   86:     let a1 = 0, a5 = 0;
+   87:     for (let i = 0; i < N; i++) {
+   88:       const t = bars[i].t;
+   89:       while (bars[a1].t <= t - 60) a1++;
+   90:       while (bars[a5].t <= t - 300) a5++;
+   91:       cnt1[i] = (i - a1 + 1) * P.TickScope;
+   92:       const avg5 = (i - a5 + 1) * P.TickScope / 5;
+   93:       thr[i] = Math.max(P.TickAbs, avg5 * P.TickK);
+   94:       tickOk[i] = cnt1[i] >= thr[i];
+   95:     }
+   96:     const disp = c.map((x, i) => emaL[i] > 0 ? x / emaL[i] * 100 : null);
+   97:     const safe = new Array(N).fill(false);
+   98:     let s = false, upRun = 0, dnRun = 0;
+   99:     for (let i = 0; i < N; i++) {
+  100:       const m = mom[i];
+  101:       if (m == null) { safe[i] = false; continue; }
+  102:       upRun = m >= P.SafeTh ? upRun + 1 : 0;
+  103:       dnRun = m < P.SafeExitTh ? dnRun + 1 : 0;
+  104:       if (!s && upRun >= P.SafeConfirm) s = true; else if (s && dnRun >= P.SafeConfirm) s = false;
+  105:       safe[i] = s;
+  106:     }
+  107:     return { mom, n, sig, ema: emaL, st: st.line, stDir: st.dir, amt, taamt, dayStart, big, cnt1, thr, tickOk, disp, safe };
+  108:   }
+  109:   function hit(rule, i, ind, b, pos, P) {
+  110:     switch (rule) {
+  111:       case 'hold': return false;
+  112:       case 'immediate': return true;
+  113:       case 'macd_zero': return ind.n[i] < 0;
+  114:       case 'macd_sig': return ind.n[i] < ind.sig[i];
+  115:       case 'supertrend': return ind.stDir[i] === -1;
+  116:       case 'trail': return b.c <= pos.peakC * (1 - P.TrailPct / 100);
+  117:       default: throw new Error('unknown rule ' + rule);
+  118:     }
+  119:   }
+  120:   function simulate(bars, ind, P, ctx) {
+  121:     const N = bars.length, trades = [], marks = [];
+  122:     const rej = { time: 0, count: 0, gap: 0, lim: 0, ema: 0, disp: 0, tick: 0 };
+  123:     const armMode = P.ArmMode === 'cross' ? 'cross' : 'state';
+  124:     const noLoss = Number(P.SafeNoLoss == null ? 1 : P.SafeNoLoss) > 0;
+  125:     const minPct = Number(P.SafeMinPct || 0), gap = Number(P.ReentryGap || 0);
+  126:     let armed = false, pos = null, hiDay = 0, pbDone = false, arms = 0, sigs = 0, lastI = -1, lastExit = -1e9, held = 0;
+  127:     const limMode = ctx.limKind === 'limit' ? P.LimMode : ctx.limKind === 'surge' ? P.SurgeMode : 'off';
+  128:     const closeTrade = (i, px, why) => {
+  129:       const gross = (px / pos.entry - 1) * 100, ret = gross - P.FeePct;
+  130:       trades.push({ inI: pos.idx, inPx: pos.entry, outI: i, outPx: px, why, gross, ret,
+  131:         mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held });
+  132:       marks.push({ i, k: 'exit', why, ret });
+  133:       pos = null; lastExit = i;
+  134:     };
+  135:     for (let i = ctx.start; i < N; i++) {
+  136:       const b = bars[i];
+  137:       if (b.d !== ctx.date) continue;
+  138:       lastI = i;
+  139:       if (b.h > hiDay) hiDay = b.h;
+  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;
+  141:       if (pos && i > pos.idx) {
+  142:         if (b.h > pos.hi) pos.hi = b.h;
+  143:         if (b.l < pos.lo) pos.lo = b.l;
+  144:         const stopPx = P.StopPct > 0 ? pos.entry * (1 - P.StopPct / 100) : -1;
+  145:         if (b.l <= stopPx) closeTrade(i, Math.min(b.o, stopPx), 'stop');
+  146:         else if (b.hms >= P._exitT) closeTrade(i, b.c, 'time');
+  147:         else {
+  148:           if (!pos.reached && (b.c / pos.entry - 1) * 100 >= P.TargetPct) pos.reached = true;
+  149:           if (b.c > pos.peakC) pos.peakC = b.c;
+  150:           const s = ind.safe[i];
+  151:           const rule = s ? (pos.reached ? P.SafeAbove : P.SafeBelow) : (pos.reached ? P.UnsafeAbove : P.UnsafeBelow);
+  152:           if (hit(rule, i, ind, b, pos, P)) {
+  153:             const cur = (b.c / pos.entry - 1) * 100 - P.FeePct;
+  154:             if (s && noLoss && cur < minPct) { pos.held++; held++; }
+  155:             else closeTrade(i, b.c, (s ? 'S' : 'U') + (pos.reached ? '+' : '-') + ':' + rule);
+  156:           }
+  157:         }
+  158:         if (!pos) continue;
+  159:       }
+  160:       const safe = ind.safe[i];
+  161:       const baseOk = safe && ctx.dayComplete && ind.taamt[i] > P.StrongA && (i - ind.dayStart[i]) >= P.ArmSkip;
+  162:       if (armMode === 'state') {
+  163:         const want = !pos && baseOk && ind.n[i] > 0;
+  164:         if (want && !armed) { arms++; marks.push({ i, k: 'arm' }); }
+  165:         armed = want;
+  166:       } else {
+  167:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+  168:         const prevSame = i > 0 && (!P.ArmSameSession || bars[i - 1].d === b.d);
+  169:         const crossUp = prevSame && ind.n[i - 1] <= 0 && ind.n[i] > 0;
+  170:         if (!pos && !armed && crossUp && baseOk) { armed = true; arms++; marks.push({ i, k: 'arm' }); }
+  171:       }
+  172:       if (pos || !armed) continue;
+  173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+  174:       if (!signal) continue;
+  175:       sigs++;
+  176:       let why = null;
+  177:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';
+  178:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';
+  179:       else if (i - lastExit <= gap) why = 'gap';
+  180:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';
+  181:       else if (!(b.c > ind.ema[i])) why = 'ema';
+  182:       else if (b.hms < P._dispU && ind.disp[i] > P.DispMax) why = 'disp';
+  183:       else if (!ind.tickOk[i]) why = 'tick';
+  184:       if (why) { rej[why]++; marks.push({ i, k: 'rej', why }); continue; }
+  185:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0 };
+  186:       armed = false;
+  187:       marks.push({ i, k: 'entry' });
+  188:     }
+  189:     if (pos && lastI >= 0) closeTrade(lastI, bars[lastI].c, 'eod');
+  190:     return { trades, marks, rej, arms, sigs, limMode, pbDone, held };
+  191:   }
+  192:   function summarize(tr) {
+  193:     const n = tr.length; let w = 0, sum = 0, best = -Infinity, worst = Infinity, mfe = 0;
+  194:     for (const t of tr) { if (t.ret > 0) w++; sum += t.ret; best = Math.max(best, t.ret); worst = Math.min(worst, t.ret); mfe += t.mfe; }
+  195:     return { n, w, sum, avg: n ? sum / n : 0, best: n ? best : 0, worst: n ? worst : 0, avgMfe: n ? mfe / n : 0 };
+  196:   }
+  197:   return { RULES, DEFAULTS, prep, validate, ema, supertrend, compute, simulate, summarize };
+  198: });

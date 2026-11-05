@@ -1,0 +1,127 @@
+#MT-REPORT v=report-1.0 step=S0.probe ver=probe-1.0 verdict=PASS ts=2026-11-04T11:41:57.053Z dur=0.0s
+#DIR E:\parent\projects\rea\projects\mom-trader\out\reports\S0.probe_20261104-204157
+#ENV node=v24.19.0 ps=5.1.26100.9818 os=win32-x64 report=report-1.0 envFile=found secretsMasked=7
+#CHK 5/5 PASS
+#DATA show strategies/engines/v1.cjs:140-198 (total 198 lines, sha12 921bdbc3319c) lines=59
+  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;
+  141:       if (pos && i > pos.idx) {
+  142:         if (b.h > pos.hi) pos.hi = b.h;
+  143:         if (b.l < pos.lo) pos.lo = b.l;
+  144:         const stopPx = P.StopPct > 0 ? pos.entry * (1 - P.StopPct / 100) : -1;
+  145:         if (b.l <= stopPx) closeTrade(i, Math.min(b.o, stopPx), 'stop');
+  146:         else if (b.hms >= P._exitT) closeTrade(i, b.c, 'time');
+  147:         else {
+  148:           if (!pos.reached && (b.c / pos.entry - 1) * 100 >= P.TargetPct) pos.reached = true;
+  149:           if (b.c > pos.peakC) pos.peakC = b.c;
+  150:           const s = ind.safe[i];
+  151:           const rule = s ? (pos.reached ? P.SafeAbove : P.SafeBelow) : (pos.reached ? P.UnsafeAbove : P.UnsafeBelow);
+  152:           if (hit(rule, i, ind, b, pos, P)) {
+  153:             const cur = (b.c / pos.entry - 1) * 100 - P.FeePct;
+  154:             if (s && noLoss && cur < minPct) { pos.held++; held++; }
+  155:             else closeTrade(i, b.c, (s ? 'S' : 'U') + (pos.reached ? '+' : '-') + ':' + rule);
+  156:           }
+  157:         }
+  158:         if (!pos) continue;
+  159:       }
+  160:       const safe = ind.safe[i];
+  161:       const baseOk = safe && ctx.dayComplete && ind.taamt[i] > P.StrongA && (i - ind.dayStart[i]) >= P.ArmSkip;
+  162:       if (armMode === 'state') {
+  163:         const want = !pos && baseOk && ind.n[i] > 0;
+  164:         if (want && !armed) { arms++; marks.push({ i, k: 'arm' }); }
+  165:         armed = want;
+  166:       } else {
+  167:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+  168:         const prevSame = i > 0 && (!P.ArmSameSession || bars[i - 1].d === b.d);
+  169:         const crossUp = prevSame && ind.n[i - 1] <= 0 && ind.n[i] > 0;
+  170:         if (!pos && !armed && crossUp && baseOk) { armed = true; arms++; marks.push({ i, k: 'arm' }); }
+  171:       }
+  172:       if (pos || !armed) continue;
+  173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+  174:       if (!signal) continue;
+  175:       sigs++;
+  176:       let why = null;
+  177:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';
+  178:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';
+  179:       else if (i - lastExit <= gap) why = 'gap';
+  180:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';
+  181:       else if (!(b.c > ind.ema[i])) why = 'ema';
+  182:       else if (b.hms < P._dispU && ind.disp[i] > P.DispMax) why = 'disp';
+  183:       else if (!ind.tickOk[i]) why = 'tick';
+  184:       if (why) { rej[why]++; marks.push({ i, k: 'rej', why }); continue; }
+  185:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0 };
+  186:       armed = false;
+  187:       marks.push({ i, k: 'entry' });
+  188:     }
+  189:     if (pos && lastI >= 0) closeTrade(lastI, bars[lastI].c, 'eod');
+  190:     return { trades, marks, rej, arms, sigs, limMode, pbDone, held };
+  191:   }
+  192:   function summarize(tr) {
+  193:     const n = tr.length; let w = 0, sum = 0, best = -Infinity, worst = Infinity, mfe = 0;
+  194:     for (const t of tr) { if (t.ret > 0) w++; sum += t.ret; best = Math.max(best, t.ret); worst = Math.min(worst, t.ret); mfe += t.mfe; }
+  195:     return { n, w, sum, avg: n ? sum / n : 0, best: n ? best : 0, worst: n ? worst : 0, avgMfe: n ? mfe / n : 0 };
+  196:   }
+  197:   return { RULES, DEFAULTS, prep, validate, ema, supertrend, compute, simulate, summarize };
+  198: });
+#END
+#DATA show strategies/frozen/S000.json:1-60 (total 60 lines, sha12 2efa1e7aa0ba) lines=60
+    1: {
+    2:   "id": "S000",
+    3:   "name": "SafeZone v1 기준선",
+    4:   "engine": "v1",
+    5:   "base": null,
+    6:   "frozen": true,
+    7:   "created": "2026-11-02T19:29:48.212Z",
+    8:   "note": "13_trade + 13a_patch 기본값",
+    9:   "params": {
+   10:     "MomLen": 50,
+   11:     "SafeTh": 100,
+   12:     "SafeExitTh": 100,
+   13:     "SafeConfirm": 1,
+   14:     "P1": 7,
+   15:     "P2": 14,
+   16:     "P3": 5,
+   17:     "StrongA": 1000000000,
+   18:     "BigMode": "abs",
+   19:     "BigTh": 50000000,
+   20:     "RelWin": 20,
+   21:     "RelK": 3,
+   22:     "BigNeedUp": 1,
+   23:     "BigNeedST": 1,
+   24:     "ArmSkip": 1,
+   25:     "ArmSameSession": 1,
+   26:     "EmaLen": 200,
+   27:     "StLen": 14,
+   28:     "StMult": 1.5,
+   29:     "TickScope": 120,
+   30:     "TickK": 1,
+   31:     "TickAbs": 0,
+   32:     "DispMax": 112,
+   33:     "DispUntil": 1000,
+   34:     "LimPct": 29,
+   35:     "SurgePct": 25,
+   36:     "LimMode": "pullback",
+   37:     "SurgeMode": "pullback",
+   38:     "PbPct": 5,
+   39:     "EntryStart": 900,
+   40:     "EntryEnd": 1520,
+   41:     "ExitTime": 1520,
+   42:     "SessionStartMax": 905,
+   43:     "TargetPct": 5,
+   44:     "StopPct": 3,
+   45:     "TrailPct": 2,
+   46:     "SafeBelow": "hold",
+   47:     "SafeAbove": "hold",
+   48:     "UnsafeBelow": "macd_sig",
+   49:     "UnsafeAbove": "immediate",
+   50:     "FeePct": 0.25,
+   51:     "SlipPct": 0,
+   52:     "MaxTrades": 10,
+   53:     "ArmMode": "state",
+   54:     "SafeNoLoss": 1,
+   55:     "SafeMinPct": 0,
+   56:     "ReentryGap": 0,
+   57:     "Match": "_AL_120t_",
+   58:     "Date": ""
+   59:   }
+   60: }
+#END

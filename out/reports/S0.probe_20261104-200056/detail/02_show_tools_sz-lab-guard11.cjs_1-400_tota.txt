@@ -1,0 +1,400 @@
+    1: 'use strict';
+    2: // sz-lab-guard11.cjs - PatternGuard lab for guard-1.1 (indep mode).
+    3: // Read-only: hash-checked v1/v3/risk1, guard-1.0 (parity only), guard-1.1.
+    4: // Preflight (abort on failure): synthetic selftest, guard-1.0 vs 1.1 gate parity on every guard-1.0 profile (real data),
+    5: //   causality by truncation (new profiles), v1 vs E3+GP000 trades, lab3-indep vs simulate.
+    6: // Diagnostics only (never used in delta): exits stamped after ExitTime are flagged art;
+    7: //   ret_prev = refill at close of last bar <= ExitTime, ret_krx = refill at KRX daily close (closing auction).
+    8: const fs = require('fs'), path = require('path'), crypto = require('crypto');
+    9: const ROOT = process.argv[2];
+   10: const A = k => { const i = process.argv.indexOf('--' + k); return i > 2 && i + 1 < process.argv.length ? process.argv[i + 1] : ''; };
+   11: function die(m) { console.log('FAIL: ' + m); process.exit(1); }
+   12: if (!ROOT) die('usage: node sz-lab-guard11.cjs <root> [--strategies S000,C013] [--risk RP000,RP001] [--guards GP000,GP020]');
+   13: const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+   14: const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+   15: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+   16: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+   17: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+   18: const GDIR0 = path.join(SD, 'guard'), GDIR = path.join(SD, 'guard11');
+   19: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard11');
+   20: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+   21: fs.mkdirSync(OUT, { recursive: true });
+   22: if (!fs.existsSync(MAN)) die('manifest missing');
+   23: const man = readJson(MAN);
+   24: function loadEng(name) {
+   25:   const e = man.engines && man.engines[name];
+   26:   if (!e) die('engine not registered: ' + name);
+   27:   const f = path.join(ENG, e.file);
+   28:   if (!fs.existsSync(f)) die('engine file missing: ' + f);
+   29:   if (sha(fs.readFileSync(f)) !== e.sha256) die('engine ' + name + ' hash mismatch');
+   30:   return require(f);
+   31: }
+   32: const V1 = loadEng('v1'), R = loadEng('risk1'), E3 = loadEng('v3')(V1, R);
+   33: function loadGuard(dir, file, ver) {
+   34:   const mf = path.join(dir, 'manifest.json'), f = path.join(ROOT, 'tools', file);
+   35:   if (!fs.existsSync(mf) || !fs.existsSync(f)) die('guard not registered: ' + file);
+   36:   if (sha(fs.readFileSync(f)) !== readJson(mf).sha256) die('guard hash mismatch: ' + file);
+   37:   const g = require(f);
+   38:   if (g.VERSION !== ver) die(file + ': VERSION ' + g.VERSION + ' expected ' + ver);
+   39:   return g;
+   40: }
+   41: const G0 = loadGuard(GDIR0, 'sz-guard.cjs', 'guard-1.0'), G = loadGuard(GDIR, 'sz-guard11.cjs', 'guard-1.1');
+   42: 
+   43: function cmpGate(a, b, upto) {
+   44:   if (upto == null && a.ok.length !== b.ok.length) return 'len ' + a.ok.length + ' vs ' + b.ok.length;
+   45:   const n = upto == null ? a.ok.length : upto + 1;
+   46:   for (let j = 0; j < n; j++) if (a.ok[j] !== b.ok[j] || a.why[j] !== b.why[j]) return 'bar ' + j + ' ok ' + a.ok[j] + '/' + b.ok[j] + ' why ' + a.why[j] + '/' + b.why[j];
+   47:   return null;
+   48: }
+   49: function selftest() {
+   50:   const out = [], t = (n, c, d) => out.push({ n, c: !!c, d: d == null ? '' : String(d) });
+   51:   const D = '20261102';
+   52:   const mkBars = spec => spec.map((x, k) => { const s = 32400 + k * 10; return { d: D, hms: Math.floor(s / 3600) * 10000 + Math.floor(s % 3600 / 60) * 100 + s % 60, o: x[0], h: x[1], l: x[2], c: x[3], v: 1000 }; });
+   53:   const NB = 20, flat = c => [c, c, c, c];
+   54:   const bars = mkBars(Array.from({ length: NB }, (_, k) => flat(k < 3 ? 100 : 103)));
+   55:   const arr = (n, f) => Array.from({ length: n }, (_, k) => (f(k) ? 1 : 0));
+   56:   const mkInd = z => ({ safe: z, stDir: new Array(z.length).fill(1), st: new Array(z.length).fill(50), n: new Array(z.length).fill(0.1), sig: new Array(z.length).fill(0) });
+   57:   const safe1 = arr(NB, () => 1), safeEp = arr(NB, k => k !== 10), safeOut = arr(NB, k => k !== 3);
+   58:   const all = (g, a, b, v) => { for (let j = a; j <= b; j++) if (g.ok[j] !== v) return false; return true; };
+   59:   const ctx = { date: D, prevClose: 100, prevChg: 0 };
+   60:   const run = (prof, safe, bs) => G.computeGate(bs || bars, mkInd(safe), ctx, G.load(prof));
+   61:   const okS = g => Array.from(g.ok).join('');
+   62:   let g = run({ patterns: { G01: { enabled: true, action: 'blockEpisode' } } }, safeEp);
+   63:   t('blockEpisode blocks until safe=0', all(g, 0, 2, 1) && all(g, 3, 9, 0) && all(g, 10, NB - 1, 1) && g.why[3] === 'G01_ep', okS(g));
+   64:   g = run({ patterns: { G01: { enabled: true, action: 'blockSec' } }, block: { sec: 30 } }, safe1);
+   65:   t('blockSec 30s', all(g, 0, 2, 1) && all(g, 3, 5, 0) && all(g, 6, NB - 1, 1) && g.why[3] === 'G01_sec', okS(g));
+   66:   g = run({ patterns: { G01: { enabled: true, action: 'rebound' } }, filter: { ignoreOutsideSafe: true } }, safeOut);
+   67:   t('ignoreOutsideSafe drops unsafe fire', all(g, 0, NB - 1, 1) && g.diag.ignored === 1, okS(g) + ' ign=' + g.diag.ignored);
+   68:   g = run({ patterns: { G01: { enabled: true, action: 'rebound' } } }, safeOut);
+   69:   t('filter off keeps unsafe fire', g.ok[3] === 0, okS(g));
+   70:   g = run({ patterns: { G01: { enabled: true, action: 'blockSec' }, G02: { enabled: true, action: 'blockEpisode', pct: 2 } }, block: { sec: 30 } }, safeEp);
+   71:   t('episode beats sec', g.why[3] === 'G02_ep' && g.ok[7] === 0 && all(g, 10, NB - 1, 1), okS(g) + ' ' + g.why[3]);
+   72:   g = run({ patterns: { G01: { enabled: true, action: 'blockDay' } } }, safeEp);
+   73:   t('blockDay holds all day', all(g, 3, NB - 1, 0), okS(g));
+   74:   const b2 = mkBars([flat(100), flat(106), [107, 110, 107.5, 110]].concat(Array.from({ length: 7 }, () => flat(110))));
+   75:   const s2 = arr(10, () => 1), pr2 = { patterns: { G01: { enabled: true, action: 'rebound', pct: 5 } }, rebound: { coolBars: 0, pbPct: 1.5 } };
+   76:   g = run(pr2, s2, b2);
+   77:   t('pbRef incl: intrabar range counts as pullback (guard-1.0)', g.ok[2] === 0 && g.ok[3] === 1, okS(g));
+   78:   g = run(Object.assign({}, pr2, { rebound: { coolBars: 0, pbPct: 1.5, pbRef: 'prior' } }), s2, b2);
+   79:   t('pbRef prior: no pullback below prior high -> still blocked', g.ok[3] === 0 && g.ok[9] === 0, okS(g));
+   80:   const pr = { patterns: { G01: { enabled: true, action: 'rebound' }, G02: { enabled: true, action: 'rebound', pct: 2 } } };
+   81:   const a0 = G0.computeGate(bars, mkInd(safe1), ctx, G0.load(pr)), a1 = G.computeGate(bars, mkInd(safe1), ctx, G.load(pr));
+   82:   t('synthetic guard-1.0 profile parity', !cmpGate(a0, a1) && a0.events.length === a1.events.length, cmpGate(a0, a1));
+   83:   let th = 0;
+   84:   for (const bad of [{ patterns: { G01: { action: 'bogus' } } }, { block: { secs: 1 } }, { filter: { ignoreOutsideSafe: 1 } }, { rebound: { pbRef: 'x' } }]) { try { G.load(bad); } catch (e) { th++; } }
+   85:   t('validation rejects bad profiles', th === 4, th);
+   86:   t('empty profile is passive', G.isPassive(G.load({})), '');
+   87:   return out;
+   88: }
+   89: const ST = selftest(), stBad = ST.filter(x => !x.c);
+   90: for (const x of stBad) console.log('  FAIL ' + x.n + ' :: ' + x.d);
+   91: if (stBad.length) die('SELFTEST ' + (ST.length - stBad.length) + '/' + ST.length + ' (guard-1.1)');
+   92: console.log('SELFTEST OK ' + ST.length + '/' + ST.length + ' (guard-1.1)');
+   93: 
+   94: // ---- copied from sz-lab-guard.cjs ----
+   95: const V1REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+   96: const TF = ['inI', 'inPx', 'outI', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+   97: function same(a, b) {
+   98:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+   99:   for (let k = 0; k < a.trades.length; k++) for (const f of TF)
+  100:     if (a.trades[k][f] !== b.trades[k][f]) return 'trade#' + (k + 1) + ' ' + f + ' ' + a.trades[k][f] + ' vs ' + b.trades[k][f];
+  101:   for (const k of V1REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+  102:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  103:   return null;
+  104: }
+  105: function stats(tr) {
+  106:   let n = tr.length, w = 0, sum = 0, gw = 0, gl = 0, eq = 0, pk = 0, mdd = 0, mfe = 0;
+  107:   for (const t of tr) {
+  108:     if (t.ret > 0) { w++; gw += t.ret; } else gl -= t.ret;
+  109:     sum += t.ret; mfe += t.mfe; eq += t.ret; if (eq > pk) pk = eq; if (pk - eq > mdd) mdd = pk - eq;
+  110:   }
+  111:   return { n, w, sum, avg: n ? sum / n : 0, pf: gl > 0 ? gw / gl : (gw > 0 ? 99 : 0), mdd, avgMfe: n ? mfe / n : 0 };
+  112: }
+  113: function parseCsv(text) {
+  114:   text = text.replace(/^\uFEFF/, '');
+  115:   const rows = []; let row = [], f = '', q = false;
+  116:   for (let i = 0; i < text.length; i++) {
+  117:     const ch = text[i];
+  118:     if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+  119:     else if (ch === '"') q = true;
+  120:     else if (ch === ',') { row.push(f); f = ''; }
+  121:     else if (ch === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+  122:     else if (ch !== '\r') f += ch;
+  123:   }
+  124:   if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  125:   return rows.filter(r => r.length > 1 || r[0] !== '');
+  126: }
+  127: function num(s) { const t = String(s == null ? '' : s).replace(/[,\s+]/g, ''); return t === '' ? NaN : Number(t); }
+  128: function stamp(ts, ds) {
+  129:   let t = String(ts == null ? '' : ts).replace(/\D/g, ''); const d = ds != null ? String(ds).replace(/\D/g, '') : '';
+  130:   if (t.length >= 14) return t.slice(0, 14);
+  131:   if ((t.length === 6 || t.length === 5) && d.length >= 8) return d.slice(0, 8) + t.padStart(6, '0');
+  132:   if (t.length === 4 && d.length >= 8) return d.slice(0, 8) + t + '00';
+  133:   if (t.length === 10 || t.length === 13) {
+  134:     const ms = t.length === 13 ? Number(t) : Number(t) * 1000;
+  135:     return new Date(ms + 9 * 3600e3).toISOString().replace(/\D/g, '').slice(0, 14);
+  136:   }
+  137:   return null;
+  138: }
+  139: function loadTicksText(text) {
+  140:   const rows = parseCsv(text);
+  141:   if (rows.length < 2) throw new Error('empty csv');
+  142:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  143:   const find = names => { for (const nm of names) { const k = hdr.indexOf(nm); if (k >= 0) return k; } return -1; };
+  144:   const iT = find(['cntr_tm', 'time', 'ts', 'datetime', 'timestamp', 'dt']);
+  145:   const iD = find(['date', 'trading_date', 'tradingdate', 'trade_date', 'day']);
+  146:   const iO = find(['open', 'open_pric', 'o']), iH = find(['high', 'high_pric', 'h']), iL = find(['low', 'low_pric', 'l']);
+  147:   const iC = find(['close', 'cur_prc', 'c', 'price']), iV = find(['volume', 'trde_qty', 'vol', 'v', 'qty']);
+  148:   if ([iT, iO, iH, iL, iC, iV].some(k => k < 0)) throw new Error('columns not found, header=' + hdr.join('|'));
+  149:   const bars = [];
+  150:   for (let r = 1; r < rows.length; r++) {
+  151:     const row = rows[r], st = stamp(row[iT], iD >= 0 ? row[iD] : null);
+  152:     if (!st) continue;
+  153:     let o = Math.abs(num(row[iO])), h = Math.abs(num(row[iH])), l = Math.abs(num(row[iL])), c = Math.abs(num(row[iC])), v = Math.abs(num(row[iV]));
+  154:     if (!(c > 0) || !isFinite(v)) continue;
+  155:     if (!(o > 0)) o = c;
+  156:     h = Math.max(h > 0 ? h : c, o, c); l = Math.min(l > 0 ? l : c, o, c);
+  157:     const y = +st.slice(0, 4), mo = +st.slice(4, 6), d = +st.slice(6, 8), hh = +st.slice(8, 10), mi = +st.slice(10, 12), ss = +st.slice(12, 14);
+  158:     bars.push({ d: st.slice(0, 8), hms: hh * 10000 + mi * 100 + ss, t: Date.UTC(y, mo - 1, d, hh, mi, ss) / 1000, o, h, l, c, v });
+  159:   }
+  160:   if (bars.length < 10) throw new Error('too few bars: ' + bars.length);
+  161:   if (bars[0].t > bars[bars.length - 1].t) bars.reverse();
+  162:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+  163:   return bars;
+  164: }
+  165: function loadDaily2(code, date, warn) {
+  166:   const f = path.join(dailyDir, code + '.csv');
+  167:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  168:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  169:   const iD = h.indexOf('date'), iC = h.indexOf('close'), iP = h.indexOf('chg_pct');
+  170:   if (iD < 0 || iC < 0) { warn.push('daily columns missing'); return null; }
+  171:   const lst = rows.slice(1).map(r => ({ d: String(r[iD]).replace(/\D/g, '').slice(0, 8), c: Math.abs(num(r[iC])), p: iP >= 0 ? num(r[iP]) : NaN }))
+  172:     .filter(x => x.d.length === 8 && x.c > 0).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  173:   let k = -1; for (let j = 0; j < lst.length; j++) if (lst[j].d < date) k = j;
+  174:   if (k < 0) { warn.push('no prev daily row'); return null; }
+  175:   let chg = lst[k].p;
+  176:   if (!isFinite(chg) && k > 0) chg = (lst[k].c / lst[k - 1].c - 1) * 100;
+  177:   return { d: lst[k].d, c: lst[k].c, chg };
+  178: }
+  179: function dailyClose(code, date) {
+  180:   const f = path.join(dailyDir, code + '.csv'); if (!fs.existsSync(f)) return null;
+  181:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  182:   const iD = h.indexOf('date'), iC = h.indexOf('close'); if (iD < 0 || iC < 0) return null;
+  183:   for (let r = 1; r < rows.length; r++) if (String(rows[r][iD]).replace(/\D/g, '').slice(0, 8) === date) { const c = Math.abs(num(rows[r][iC])); return c > 0 ? c : null; }
+  184:   return null;
+  185: }
+  186: function dailyHash(code) { const f = path.join(dailyDir, code + '.csv'); return fs.existsSync(f) ? sha(fs.readFileSync(f)).slice(0, 12) : 'none'; }
+  187: function adjExit(t, bars, krx, xt) {
+  188:   const ob = bars[t.outI];
+  189:   if (!(xt > 0) || !(ob.hms > xt)) return null;
+  190:   const fee = (t.outPx / t.inPx - 1) * 100 - t.ret, r = px => (px > 0 ? (px / t.inPx - 1) * 100 - fee : null);
+  191:   const j = t.outI - 1, pb = j >= t.inI && bars[j].d === ob.d && bars[j].hms <= xt ? bars[j] : null;
+  192:   return { prev: pb ? r(pb.c) : null, prevHms: pb ? pb.hms : null, krx: r(krx) };
+  193: }
+  194: 
+  195: // ---- strategies ----
+  196: const lib = {};
+  197: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+  198:   const s = readJson(path.join(FRZ, f));
+  199:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+  200:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+  201: }
+  202: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  203: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  204:   const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = Object.assign({ kind: 'survivor' }, s);
+  205: }
+  206: function resolve(id) {
+  207:   if (lib[id]) return lib[id];
+  208:   const f = path.join(CAND, id + '.json'); if (!fs.existsSync(f)) die('strategy not found: ' + id);
+  209:   const c = readJson(f), b = lib[c.base || B.id]; if (!b) die('base not found: ' + c.base);
+  210:   const p = Object.assign({}, b.params);
+  211:   for (const k of Object.keys(c.overrides || {})) { if (!(k in p)) die('unknown param ' + k + ' in ' + id); p[k] = c.overrides[k]; }
+  212:   return { id: c.id, name: c.name, params: p, kind: 'candidate', engine: c.engine || 'v1' };
+  213: }
+  214: let sids = list(A('strategies')); if (!sids.length) sids = [B.id];
+  215: sids = [B.id].concat(sids.filter(x => x !== B.id));
+  216: const strats = sids.map(resolve);
+  217: for (const s of strats) if ((s.engine || 'v1') !== 'v1') die(s.id + ': engine ' + s.engine + ' not supported');
+  218: 
+  219: // ---- risk profiles: position.* only ----
+  220: const notes = [], addNote = m => { if (notes.indexOf(m) < 0) notes.push(m); };
+  221: let rwant = list(A('risk')); if (!rwant.length) rwant = ['RP000'];
+  222: if (rwant.indexOf('RP000') < 0) rwant.unshift('RP000');
+  223: const profs = [];
+  224: for (const id of rwant) {
+  225:   const f = path.join(RISK, id + '.json'); if (!fs.existsSync(f)) die('risk profile missing: ' + id);
+  226:   const raw = readJson(f), unk = R.unknownKeys(raw); if (unk.length) die(id + ': unknown keys ' + unk.join(','));
+  227:   const P = R.load(raw), v = R.validate(P); if (v.length) die(id + ': invalid ' + v.join(','));
+  228:   const on = R.enabledList(P), bad = on.filter(x => x.indexOf('position.') !== 0);
+  229:   if (bad.length) { addNote('skip ' + id + ' (non-position items: ' + bad.join(' ') + ') -> needs v3.1 portfolio hook'); continue; }
+  230:   profs.push({ id, P, on });
+  231: }
+  232: if (!profs.length || profs[0].id !== 'RP000' || !R.isPassive(profs[0].P)) die('RP000 missing or not passive');
+  233: 
+  234: // ---- guard profiles ----
+  235: const gwant = list(A('guards')), guards = [];
+  236: for (const f of fs.readdirSync(GDIR).filter(x => /^GP\d+\.json$/.test(x)).sort()) {
+  237:   const id = f.replace('.json', '');
+  238:   if (gwant.length && gwant.indexOf(id) < 0 && id !== 'GP000') continue;
+  239:   guards.push({ id, P: G.load(readJson(path.join(GDIR, f))) });
+  240: }
+  241: if (!guards.length || guards[0].id !== 'GP000' || !G.isPassive(guards[0].P)) die('GP000 missing or not passive');
+  242: const oldGuards = fs.readdirSync(GDIR0).filter(x => /^GP\d+\.json$/.test(x)).sort().map(f => {
+  243:   const raw = readJson(path.join(GDIR0, f)); return { id: f.replace('.json', ''), P0: G0.load(raw), P1: G.load(raw) };
+  244: });
+  245: if (!oldGuards.length) die('no guard-1.0 profiles for parity');
+  246: 
+  247: // ---- dataset ----
+  248: const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(B.params.Match)).sort();
+  249: if (!files.length) die('no tick csv matching ' + B.params.Match);
+  250: const items0 = [];
+  251: for (const f of files) {
+  252:   try {
+  253:     const buf = fs.readFileSync(path.join(tickDir, f)), bars = loadTicksText(buf.toString('utf8'));
+  254:     const code = f.split('_')[0], dm = f.match(/(\d{8})\.csv$/i), m = f.match(/_(\d+)t_/);
+  255:     const date = dm ? dm[1] : bars[bars.length - 1].d, start = bars.findIndex(b => b.d === date);
+  256:     if (start < 0) throw new Error('target date not in file');
+  257:     const warn = [], dly = loadDaily2(code, date, warn), krx = dailyClose(code, date);
+  258:     for (const w of warn) addNote(f + ': ' + w);
+  259:     if (!krx) addNote(f + ': no KRX daily close for ' + date + ' (adjKrx falls back to engine ret)');
+  260:     items0.push({ f, code, date, bars, start, scope: m ? Number(m[1]) : 120, dly, krx, fp: f + ':' + sha(buf).slice(0, 16) + ':' + dailyHash(code) });
+  261:   } catch (e) { addNote('[excluded] ' + f + ': ' + e.message); }
+  262: }
+  263: if (!items0.length) die('no usable tick files');
+  264: const dsId = sha(items0.map(x => x.fp).join('|')).slice(0, 10);
+  265: function mkItems(params) {
+  266:   return items0.map(it => {
+  267:     const P = V1.prep(Object.assign({}, params, { Date: '', TickScope: it.scope }));
+  268:     const dayComplete = it.bars[it.start].hms <= P._sessMax;
+  269:     let limKind = null;
+  270:     if (it.dly && isFinite(it.dly.chg)) { if (it.dly.chg >= P.LimPct) limKind = 'limit'; else if (it.dly.chg >= P.SurgePct) limKind = 'surge'; }
+  271:     return { code: it.code, source: '_', bars: it.bars, ind: V1.compute(it.bars, P), P,
+  272:       ctx: { start: it.start, date: it.date, dayComplete, limKind, prevClose: it.dly ? it.dly.c : null, prevChg: it.dly ? it.dly.chg : null } };
+  273:   });
+  274: }
+  275: const fx = x => (x > 0 ? '+' : '') + Number(x).toFixed(2);
+  276: const pad = (s, n) => String(s).padStart(n);
+  277: const hmsS = h => { const s = String(h).padStart(6, '0'); return s.slice(0, 2) + ':' + s.slice(2, 4) + ':' + s.slice(4); };
+  278: const HDR = ' guard   trades     sum    PF   MDD lossDays worstDay worstTr blocked removed(n/sum) added(n/sum)   delta  art adjPrev  adjKrx';
+  279: 
+  280: // ---- run ----
+  281: const rep = [], runRows = [], trRows = [];
+  282: let parityN = 0, p10N = 0, causN = 0;
+  283: for (const s of strats) {
+  284:   const items = mkItems(s.params);
+  285:   const xr = Number(s.params.ExitTime), xt = xr > 0 && xr < 10000 ? xr * 100 : xr;
+  286:   if (!(xt > 0)) addNote(s.id + ': ExitTime not numeric, art diagnostics off');
+  287:   for (const og of oldGuards) items.forEach((x, k) => {
+  288:     const a = G0.computeGate(x.bars, x.ind, x.ctx, og.P0), b = G.computeGate(x.bars, x.ind, x.ctx, og.P1);
+  289:     let m = cmpGate(a, b);
+  290:     if (!m && a.events.length !== b.events.length) m = 'events ' + a.events.length + ' vs ' + b.events.length;
+  291:     if (!m) for (let e = 0; e < a.events.length; e++) { const u = a.events[e], v = b.events[e]; if (u.pid !== v.pid || u.i !== v.i || u.state !== v.state) { m = 'event#' + e; break; } }
+  292:     if (m) die('PARITY guard-1.0 vs 1.1 ' + s.id + ' ' + og.id + ' ' + items0[k].f + ': ' + m);
+  293:     p10N++;
+  294:   });
+  295:   const gates = {};
+  296:   for (const g of guards) {
+  297:     gates[g.id] = items.map(x => G.computeGate(x.bars, x.ind, x.ctx, g.P));
+  298:     gates[g.id].forEach((r, k) => { for (const m of r.diag.missing) addNote(g.id + ' ' + items0[k].f + ': missing ' + m); });
+  299:     if (G.isPassive(g.P)) continue;
+  300:     items.forEach((x, k) => {
+  301:       const full = gates[g.id][k], N = x.bars.length, st = x.ctx.start;
+  302:       for (const fr of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+  303:         const cut = st + Math.floor((N - 1 - st) * fr), ic = Object.assign({}, x.ind);
+  304:         for (const key of ['safe', 'stDir', 'st', 'n', 'sig']) if (x.ind[key]) ic[key] = Array.prototype.slice.call(x.ind[key], 0, cut + 1);
+  305:         const m = cmpGate(full, G.computeGate(x.bars.slice(0, cut + 1), ic, x.ctx, g.P), cut);
+  306:         if (m) die('CAUSAL ' + s.id + ' ' + g.id + ' ' + items0[k].f + ' cut=' + cut + ': ' + m);
+  307:         causN++;
+  308:       }
+  309:     });
+  310:   }
+  311:   for (const rp of profs) {
+  312:     const hook = (gid, k) => ({ canEnter: G.makeHook(gates[gid][k]) });
+  313:     const base = items.map((x, k) => E3.simulate(x.bars, x.ind, x.P, x.ctx, rp.P, hook('GP000', k)));
+  314:     items.forEach((x, k) => {
+  315:       if (rp.id === 'RP000') { const m = same(V1.simulate(x.bars, x.ind, x.P, x.ctx), base[k]); if (m) die('PARITY v1 vs guard GP000 ' + s.id + ' ' + items0[k].f + ': ' + m); }
+  316:       const m2 = same(E3.runPortfolio([x], rp.P)[0], base[k]); if (m2) die('PARITY lab3-indep vs simulate ' + s.id + '/' + rp.id + ' ' + items0[k].f + ': ' + m2);
+  317:       parityN++;
+  318:     });
+  319:     const bst = stats([].concat(...base.map(r => r.trades)));
+  320:     rep.push('', '== ' + s.id + ' x ' + rp.id + ' (risk on=[' + rp.on.join(' ') + '], ExitTime ' + xt + ') ==');
+  321:     rep.push(HDR);
+  322:     for (const g of guards) {
+  323:       const res = g.id === 'GP000' ? base : items.map((x, k) => E3.simulate(x.bars, x.ind, x.P, x.ctx, rp.P, hook(g.id, k)));
+  324:       const per = res.map((r, k) => ({ code: items0[k].code, date: items0[k].date, trades: r.trades, rej: r.rej, sum: r.trades.reduce((a, t) => a + t.ret, 0) }));
+  325:       const st = stats([].concat(...per.map(p => p.trades)));
+  326:       let lossDays = 0, worstDay = 0, worstTr = 0, blk = 0, rmN = 0, rmS = 0, adN = 0, adS = 0, artN = 0, sumP = 0, sumK = 0;
+  327:       const why = {}, diffs = [], artL = [];
+  328:       const ign = gates[g.id].reduce((a, r) => a + (r.diag.ignored || 0), 0);
+  329:       per.forEach((p, k) => {
+  330:         if (p.sum < 0) lossDays++;
+  331:         worstDay = Math.min(worstDay, p.sum);
+  332:         for (const t of p.trades) worstTr = Math.min(worstTr, t.ret);
+  333:         for (const key of Object.keys(p.rej)) if (/^r_G0/.test(key)) { blk += p.rej[key]; why[key] = (why[key] || 0) + p.rej[key]; }
+  334:         const bt = base[k].trades, gi = new Set(p.trades.map(t => t.inI)), bi = new Set(bt.map(t => t.inI));
+  335:         for (const t of bt) if (!gi.has(t.inI)) { rmN++; rmS += t.ret; }
+  336:         for (const t of p.trades) if (!bi.has(t.inI)) { adN++; adS += t.ret; }
+  337:         const bs = bt.reduce((a, t) => a + t.ret, 0);
+  338:         if (Math.abs(p.sum - bs) > 1e-9) diffs.push(p.code + ' ' + fx(bs) + '->' + fx(p.sum));
+  339:         const b0 = items[k].bars;
+  340:         p.trades.forEach((t, j) => {
+  341:           const a = adjExit(t, b0, items0[k].krx, xt);
+  342:           const rP = a && a.prev != null ? a.prev : t.ret, rK = a && a.krx != null ? a.krx : t.ret;
+  343:           sumP += rP; sumK += rK;
+  344:           if (a) {
+  345:             artN++;
+  346:             if (g.id === 'GP000') artL.push(p.code + ' ' + hmsS(b0[t.inI].hms) + ' ' + t.inPx + ' -> ' + hmsS(b0[t.outI].hms) + ' ' + t.outPx + ' ' + t.why + ' ret ' + fx(t.ret) +
+  347:               ' | prev(' + (a.prevHms != null ? hmsS(a.prevHms) : '-') + ') ' + (a.prev != null ? fx(a.prev) : '-') + ' | krx(' + (items0[k].krx || '-') + ') ' + (a.krx != null ? fx(a.krx) : '-'));
+  348:           }
+  349:           trRows.push([s.id + '__' + rp.id + '__' + g.id, p.code, p.date, j + 1, hmsS(b0[t.inI].hms), t.inPx, hmsS(b0[t.outI].hms), t.outPx, t.why, t.ret.toFixed(3), t.mfe.toFixed(3),
+  350:             a ? 1 : 0, a && a.prev != null ? a.prev.toFixed(3) : '', a && a.krx != null ? a.krx.toFixed(3) : ''].join(','));
+  351:         });
+  352:       });
+  353:       const delta = st.sum - bst.sum;
+  354:       rep.push(' ' + g.id.padEnd(6) + pad(st.n, 7) + pad(fx(st.sum), 8) + pad(st.pf.toFixed(2), 6) + pad(st.mdd.toFixed(2), 6) + pad(lossDays, 9) +
+  355:         pad(fx(worstDay), 9) + pad(fx(worstTr), 8) + pad(blk, 8) + pad(rmN + '/' + fx(rmS), 15) + pad(adN + '/' + fx(adS), 13) + pad(fx(delta), 8) +
+  356:         pad(artN, 5) + pad(fx(sumP), 8) + pad(fx(sumK), 8));
+  357:       if (g.id !== 'GP000') {
+  358:         const w = (Object.keys(why).sort().map(k => k.replace('r_', '') + ':' + why[k]).join(' ') + (ign ? ' ignoredOutsideSafe:' + ign : '')).trim();
+  359:         if (w) rep.push('        block reasons: ' + w);
+  360:         if (diffs.length) rep.push('        by stock: ' + diffs.join(' | '));
+  361:       }
+  362:       for (const l of artL) rep.push('        art: ' + l);
+  363:       runRows.push([s.id, rp.id, g.id, st.n, st.sum.toFixed(3), st.pf.toFixed(3), st.mdd.toFixed(3), lossDays, worstDay.toFixed(3), worstTr.toFixed(3), blk, rmN, rmS.toFixed(3), adN, adS.toFixed(3), delta.toFixed(3), artN, sumP.toFixed(3), sumK.toFixed(3)].join(','));
+  364:     }
+  365:   }
+  366: }
+  367: console.log('PARITY guard-1.0=1.1 OK gates=' + p10N + ' | CAUSAL OK checks=' + causN + ' | PARITY v1/E3 OK ' + parityN);
+  368: 
+  369: // ---- event ledger ----
+  370: const LG = G.load({ id: 'LEDGER', patterns: { G01: { enabled: true }, G02: { enabled: true }, G03: { enabled: true }, G04: { enabled: true }, G05: { enabled: true }, G06: { enabled: true } } });
+  371: const itemsB = mkItems(B.params), evRows = [], agg = {};
+  372: let baseN = 0, baseCrash = 0, baseMae = 0, baseMfe = 0;
+  373: itemsB.forEach((x, k) => {
+  374:   const g = G.computeGate(x.bars, x.ind, x.ctx, LG);
+  375:   for (const e of G.forward(x.bars, g.events, LG.ledger)) {
+  376:     const safe = x.ind.safe[e.i] ? 1 : 0, mom = x.ind.mom[e.i];
+  377:     evRows.push([e.pid, items0[k].code, e.d, hmsS(e.hms), e.px, safe, mom == null ? '' : mom.toFixed(2), e.state,
+  378:       e.mfe10.toFixed(3), e.mae10.toFixed(3), e.mfe30.toFixed(3), e.mae30.toFixed(3), e.mfe60.toFixed(3), e.mae60.toFixed(3), e.crash ? 1 : 0].join(','));
+  379:     const a = agg[e.pid] || (agg[e.pid] = { n: 0, safe: 0, crash: 0, mae: 0, mfe: 0, codes: new Set() });
+  380:     a.n++; a.safe += safe; a.crash += e.crash ? 1 : 0; a.mae += e.mae30; a.mfe += e.mfe30; a.codes.add(items0[k].code);
+  381:   }
+  382:   const pe = [];
+  383:   for (let i = x.ctx.start; i < x.bars.length; i++) { const b = x.bars[i]; if (b.d === x.ctx.date && b.hms >= 90000 && b.hms <= 150000) pe.push({ pid: 'BASE', i, d: b.d, hms: b.hms, px: b.c }); }
+  384:   for (const e of G.forward(x.bars, pe, LG.ledger)) { baseN++; if (e.crash) baseCrash++; baseMae += e.mae30; baseMfe += e.mfe30; }
+  385: });
+  386: const baseRate = baseN ? baseCrash / baseN : 0;
+  387: rep.push('', '== Event ledger (all patterns, default thresholds, ' + B.id + ' indicators) ==');
+  388: rep.push(' base (every bar 09:00-15:00): bars=' + baseN + ' crash30(<=-' + LG.ledger.crashPct + '%)=' + (baseRate * 100).toFixed(1) + '% avgMFE30=' + fx(baseN ? baseMfe / baseN : 0) + ' avgMAE30=' + fx(baseN ? baseMae / baseN : 0));
+  389: rep.push(' pid   events stocks inSafe crash30   lift avgMFE30 avgMAE30');
+  390: for (const p of G.PIDS) {
+  391:   const a = agg[p];
+  392:   if (!a) { rep.push(' ' + p + '      0'); continue; }
+  393:   const cr = a.crash / a.n;
+  394:   rep.push(' ' + p + pad(a.n, 9) + pad(a.codes.size, 7) + pad(a.safe, 7) + pad((cr * 100).toFixed(1) + '%', 8) + pad(baseRate > 0 ? (cr / baseRate).toFixed(2) : '-', 7) + pad(fx(a.mfe / a.n), 9) + pad(fx(a.mae / a.n), 9));
+  395: }
+  396: 
+  397: const head = ['PatternGuard lab ' + G.VERSION + ' | data ' + dsId + ' | stock-days ' + items0.length + ' | selftest ' + ST.length + '/' + ST.length +
+  398:   ' | parity v1/E3 ' + parityN + ' | parity guard-1.0=1.1 ' + p10N + ' gates | causal ' + causN,
+  399:   'strategies=' + strats.map(s => s.id).join(',') + ' risk=' + profs.map(p => p.id).join(',') + ' guards=' + guards.map(g => g.id).join(','),
+  400:   'delta = sum(guard) - sum(GP000) under same strategy x risk. removed = GP000 trades the guard blocked, added = new entries after block.',

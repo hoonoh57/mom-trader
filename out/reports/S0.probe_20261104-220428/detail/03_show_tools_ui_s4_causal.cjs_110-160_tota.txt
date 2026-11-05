@@ -1,0 +1,51 @@
+  110: function loadDaily2(dailyDir, code, date, warn) {
+  111:   const f = path.join(dailyDir, code + '.csv');
+  112:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+  113:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  114:   const iD = h.indexOf('date'), iC = h.indexOf('close'), iP = h.indexOf('chg_pct');
+  115:   if (iD < 0 || iC < 0) { warn.push('daily columns missing'); return null; }
+  116:   const lst = rows.slice(1).map(r => ({ d: String(r[iD]).replace(/\D/g, '').slice(0, 8), c: Math.abs(num(r[iC])), p: iP >= 0 ? num(r[iP]) : NaN }))
+  117:     .filter(x => x.d.length === 8 && x.c > 0).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  118:   let k = -1; for (let j = 0; j < lst.length; j++) if (lst[j].d < date) k = j;
+  119:   if (k < 0) { warn.push('no prev daily row'); return null; }
+  120:   let chg = lst[k].p;
+  121:   if (!isFinite(chg) && k > 0) chg = (lst[k].c / lst[k - 1].c - 1) * 100;
+  122:   return { d: lst[k].d, c: lst[k].c, chg };
+  123: }
+  124: const TF = ['inPx', 'outPx', 'why', 'gross', 'ret', 'mfe', 'mae', 'bars', 'reached', 'held'];
+  125: const REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+  126: function sameTr(a, b, off) {
+  127:   if (a.trades.length !== b.trades.length) return 'trades ' + a.trades.length + ' vs ' + b.trades.length;
+  128:   for (let k = 0; k < a.trades.length; k++) {
+  129:     const x = a.trades[k], y = b.trades[k];
+  130:     if (x.inI !== y.inI + off) return 'trade#' + (k + 1) + ' inI ' + x.inI + ' vs ' + (y.inI + off);
+  131:     if (x.outI !== y.outI + off) return 'trade#' + (k + 1) + ' outI ' + x.outI + ' vs ' + (y.outI + off);
+  132:     for (const f of TF) if (x[f] !== y[f]) return 'trade#' + (k + 1) + ' ' + f + ' ' + x[f] + ' vs ' + y[f];
+  133:   }
+  134:   return null;
+  135: }
+  136: function sameCnt(a, b) {
+  137:   for (const k of REJ) if (a.rej[k] !== b.rej[k]) return 'rej.' + k + ' ' + a.rej[k] + ' vs ' + b.rej[k];
+  138:   if (a.arms !== b.arms || a.sigs !== b.sigs || a.held !== b.held) return 'arms/sigs/held ' + [a.arms, a.sigs, a.held] + ' vs ' + [b.arms, b.sigs, b.held];
+  139:   return null;
+  140: }
+  141: const DCACHE = new Map();
+  142: function dayClose(dailyDir, code, date) {
+  143:   let m = DCACHE.get(code);
+  144:   if (!m) {
+  145:     m = new Map(); const f = path.join(dailyDir, code + '.csv');
+  146:     if (fs.existsSync(f)) {
+  147:       const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase()), iD = h.indexOf('date'), iC = h.indexOf('close');
+  148:       if (iD >= 0 && iC >= 0) for (const r of rows.slice(1)) { const d = String(r[iD]).replace(/\D/g, '').slice(0, 8), c = Math.abs(num(r[iC])); if (d.length === 8 && c > 0) m.set(d, c); }
+  149:     }
+  150:     DCACHE.set(code, m);
+  151:   }
+  152:   return m.get(date) || null;
+  153: }
+  154: function findCapCsv() {
+  155:   const a = A('csv'); if (a) return path.resolve(a);
+  156:   const cand = [], walk = (d, depth) => {
+  157:     let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+  158:     for (const e of ents) {
+  159:       const p = path.join(d, e.name);
+  160:       if (e.isDirectory()) { if (depth > 0 && !/^(ticks|raw|daily|node_modules|\.git)$/i.test(e.name)) walk(p, depth - 1); }

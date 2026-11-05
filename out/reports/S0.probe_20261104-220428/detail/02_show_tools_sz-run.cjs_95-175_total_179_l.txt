@@ -1,0 +1,81 @@
+   95:   tr.forEach((t, k) => {
+   96:     h += '<tr><td>' + (k + 1) + '</td><td>' + fmtT(bars[t.inI].hms) + '</td><td>' + fmtPx(t.inPx) + '</td><td>' + fmtT(bars[t.outI].hms) +
+   97:       '</td><td>' + fmtPx(t.outPx) + '</td><td>' + whyKo(t.why) + '</td><td class="' + (t.ret > 0 ? 'up' : 'dn') + '">' + sgn(t.ret) +
+   98:       '</td><td>' + sgn(t.mfe) + '</td><td>' + sgn(t.mae) + '</td><td>' + t.bars + '</td><td>' + (t.reached ? 'Y' : '') + '</td></tr>';
+   99:   });
+  100:   if (!tr.length) h += '<tr><td colspan="11">거래 없음</td></tr>';
+  101:   return h + '</table>';
+  102: }
+  103: const STYLE = '<style>body{background:#111;color:#ddd;font:13px "Malgun Gothic",sans-serif;margin:8px}a{color:#6cf}' +
+  104:   'table{border-collapse:collapse;margin:6px 0}td,th{border:1px solid #333;padding:3px 8px;text-align:right}th{background:#222}' +
+  105:   '.up{color:#ff6b6b}.dn{color:#5cc8ff}.warn{color:#ffcc33}#tip{position:absolute;display:none;pointer-events:none;background:rgba(0,0,0,.88);' +
+  106:   'border:1px solid #555;padding:6px 8px;font:12px "Malgun Gothic",sans-serif;line-height:1.45}</style>';
+  107: 
+  108: const sum = [], idx = [], csv = ['\uFEFFcode,date,mode,no,in_time,in_px,out_time,out_px,why,ret_pct,mfe_pct,mae_pct,bars,reached'];
+  109: let failed = 0, totS = [], totB = [];
+  110: for (const f of files) {
+  111:   try {
+  112:     const code = f.split('_')[0];
+  113:     const m = f.match(/_(\d+)t_/);
+  114:     const Pf = Object.assign({}, P, { TickScope: m ? Number(m[1]) : P.TickScope });
+  115:     const bars = loadTicks(path.join(tickDir, f));
+  116:     const dm = f.match(/(\d{8})\.csv$/i);
+  117:     const date = P.Date || (dm ? dm[1] : bars[bars.length - 1].d);
+  118:     const start = bars.findIndex(b => b.d === date);
+  119:     if (start < 0) throw new Error('target date ' + date + ' not in file');
+  120:     const warn = [];
+  121:     const dayComplete = bars[start].hms <= Pf._sessMax;
+  122:     if (!dayComplete) warn.push('당일 첫 봉 ' + fmtT(bars[start].hms) + ' (장 시작 봉 아님): 누적대금 판정 불가 → 진입 없음');
+  123:     if (start < Pf.EmaLen * 3) warn.push('EMA' + Pf.EmaLen + ' 워밍업 ' + start + '봉(권장 ' + Pf.EmaLen * 3 + '+): 영웅문 값과 다를 수 있음');
+  124:     const dly = loadDaily(code, date, warn);
+  125:     let limKind = null;
+  126:     if (dly && isFinite(dly.chg)) { if (dly.chg >= Pf.LimPct) limKind = 'limit'; else if (dly.chg >= Pf.SurgePct) limKind = 'surge'; }
+  127:     const ind = SZ.compute(bars, Pf);
+  128:     const ctx = { start, date, dayComplete, limKind };
+  129:     const R = SZ.simulate(bars, ind, Pf, ctx);
+  130:     const PB = Object.assign({}, Pf, { SafeBelow: 'macd_sig', SafeAbove: 'macd_sig', UnsafeBelow: 'macd_sig', UnsafeAbove: 'macd_sig' });
+  131:     const RB = SZ.simulate(bars, ind, PB, ctx);
+  132:     const S1 = SZ.summarize(R.trades), S2 = SZ.summarize(RB.trades);
+  133:     totS = totS.concat(R.trades); totB = totB.concat(RB.trades);
+  134:     const addCsv = (mode, tr) => tr.forEach((t, k) => csv.push([code, date, mode, k + 1, fmtT(bars[t.inI].hms), t.inPx.toFixed(0),
+  135:       fmtT(bars[t.outI].hms), t.outPx.toFixed(0), whyKo(t.why), t.ret.toFixed(3), t.mfe.toFixed(3), t.mae.toFixed(3), t.bars, t.reached ? 1 : 0].join(',')));
+  136:     addCsv('safezone', R.trades); addCsv('baseline', RB.trades);
+  137:     // 차트는 대상일 + 앞쪽 300봉만 표시
+  138:     const v0 = Math.max(0, start - 300), sl = a => a.slice(v0);
+  139:     const rd = (a, k) => a.slice(v0).map(x => x == null || !isFinite(x) ? null : +Number(x).toFixed(k));
+  140:     const shiftT = t => Object.assign({}, t, { inI: t.inI - v0, outI: t.outI - v0 });
+  141:     const D = {
+  142:       o: sl(bars.map(b => b.o)), h: sl(bars.map(b => b.h)), l: sl(bars.map(b => b.l)), c: sl(bars.map(b => b.c)), hms: sl(bars.map(b => b.hms)),
+  143:       mom: rd(ind.mom, 3), n: rd(ind.n, 5), sig: rd(ind.sig, 5), ema: rd(ind.ema, 1), st: rd(ind.st, 1), stDir: sl(ind.stDir),
+  144:       amt: rd(ind.amt, 0), taamt: rd(ind.taamt, 0), big: sl(ind.big), cnt1: sl(ind.cnt1), thr: rd(ind.thr, 0), tickOk: sl(ind.tickOk),
+  145:       disp: rd(ind.disp, 2), safe: sl(ind.safe),
+  146:       trades: R.trades.map(shiftT), marks: R.marks.map(m => Object.assign({}, m, { i: m.i - v0 })),
+  147:       emaLen: Pf.EmaLen, momLen: Pf.MomLen, safeTh: Pf.SafeTh, bigMode: Pf.BigMode, tickK: Pf.TickK };
+  148:     const rejTxt = Object.keys(R.rej).map(k => k + '=' + R.rej[k]).join(' ');
+  149:     const head = '<h2>' + code + ' · ' + date + '</h2><div>전일 ' + (dly && isFinite(dly.chg) ? sgn(dly.chg) + '%' : '-') +
+  150:       ' / 구분 ' + (limKind || '일반') + ' (' + R.limMode + ') · ARM ' + R.arms + ' · 신호 ' + R.sigs + ' · 탈락 ' + rejTxt + '</div>' +
+  151:       '<div class="up">SafeZone: ' + sumLine(S1) + '</div><div class="dn">기본규칙(시그널↓): ' + sumLine(S2) + '</div>' +
+  152:       warn.map(w => '<div class="warn">⚠ ' + w + '</div>').join('');
+  153:     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + code + ' ' + date + '</title>' + STYLE + '</head><body>' +
+  154:       '<a href="index.html">← 목록</a>' + head + '<canvas id="cv" style="width:100%;height:78vh;display:block"></canvas><div id="tip"></div>' +
+  155:       tradeTable('SafeZone 거래', R.trades, bars) + tradeTable('기본규칙 거래', RB.trades, bars) +
+  156:       '<script>window.SZDATA=' + JSON.stringify(D) + ';</script><script>' + RENDER + '</script></body></html>';
+  157:     const outF = code + '_' + date + '.html';
+  158:     fs.writeFileSync(path.join(outDir, outF), html, 'utf8');
+  159:     idx.push('<tr><td><a href="' + outF + '">' + code + '</a></td><td>' + date + '</td><td>' + S1.n + '</td><td class="' + (S1.sum > 0 ? 'up' : 'dn') + '">' + sgn(S1.sum) +
+  160:       '</td><td>' + S2.n + '</td><td class="' + (S2.sum > 0 ? 'up' : 'dn') + '">' + sgn(S2.sum) + '</td></tr>');
+  161:     sum.push('[' + code + ' ' + date + '] 전일 ' + (dly && isFinite(dly.chg) ? sgn(dly.chg) + '%' : '-') + ' ' + (limKind || '일반') + ' | ARM ' + R.arms + ' 신호 ' + R.sigs + ' | 탈락 ' + rejTxt);
+  162:     sum.push('   SafeZone : ' + sumLine(S1));
+  163:     R.trades.forEach((t, k) => sum.push('     ' + (k + 1) + ') ' + fmtT(bars[t.inI].hms) + ' ' + fmtPx(t.inPx) + ' → ' + fmtT(bars[t.outI].hms) + ' ' + fmtPx(t.outPx) +
+  164:       ' ' + sgn(t.ret) + '% (MFE ' + sgn(t.mfe) + ', MAE ' + sgn(t.mae) + ') ' + whyKo(t.why)));
+  165:     sum.push('   기본규칙 : ' + sumLine(S2));
+  166:     warn.forEach(w => sum.push('   [주의] ' + w));
+  167:     console.log('OK ' + f + ' sz=' + S1.n + '/' + S1.sum.toFixed(2) + ' base=' + S2.n + '/' + S2.sum.toFixed(2));
+  168:   } catch (e) { failed++; sum.push('[실패] ' + f + ': ' + e.message); console.log('FAIL ' + f + ': ' + e.message); }
+  169: }
+  170: const TS = SZ.summarize(totS), TB = SZ.summarize(totB);
+  171: sum.push('=== 전체 SafeZone : ' + sumLine(TS));
+  172: sum.push('=== 전체 기본규칙 : ' + sumLine(TB));
+  173: fs.writeFileSync(path.join(outDir, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><title>SafeZone</title>' + STYLE + '</head><body><h2>SafeZone 2단계</h2>' +
+  174:   '<div class="up">SafeZone: ' + sumLine(TS) + '</div><div class="dn">기본규칙: ' + sumLine(TB) + '</div>' +
+  175:   '<table><tr><th>종목</th><th>일자</th><th>SZ 거래</th><th>SZ 합계%</th><th>기본 거래</th><th>기본 합계%</th></tr>' + idx.join('') + '</table></body></html>', 'utf8');

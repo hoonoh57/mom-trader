@@ -1,0 +1,340 @@
+#MT-REPORT v=report-1.0 step=S0.probe ver=probe-1.0 verdict=FAIL ts=2026-11-04T06:17:32.376Z dur=0.1s
+#DIR E:\parent\projects\rea\projects\mom-trader\out\reports\S0.probe_20261104-151732
+#ENV node=v24.19.0 ps=5.1.26100.9818 os=win32-x64 report=report-1.0 envFile=found secretsMasked=7
+#CHK 8/9 PASS, FAIL=1, ERR=0
+#FAIL selftest: utf8 hangul roundtrip without BOM :: mismatch len=6
+#OKLIST selftest: mask secrets/bearer/account, keep prices | selftest: env loader picks only secret-like keys | selftest: size cap and FAIL report with code context | selftest: PASS report is compact | strategies/manifest.json exists | hash strategies/engines/v1.cjs | hash strategies/engines/risk1.cjs | hash strategies/engines/v3.cjs
+#NOTE manifests found: strategies/guard/manifest.json, strategies/guard11/manifest.json, strategies/manifest.json
+#NOTE hash target not found for strategies/guard11/manifest.json file=tools/sz-guard11.cjs
+#NOTE chart candidates: 2
+#DATA manifest strategies/guard/manifest.json lines=5
+{
+  "version": "guard-1.0",
+  "sha256": "19607cabd0a27b0f4a79e7caf053308395f28a5d185aa63b257bcff134b109ab"
+}
+#END
+#DATA manifest strategies/guard11/manifest.json lines=6
+{
+    "version":  "guard-1.1",
+    "file":  "tools/sz-guard11.cjs",
+    "sha256":  "73d188febcf9dc1243fa2382547f75e154ef18b1d1abca465bf7a6dc82ffa844",
+    "registered":  "2026-11-03T07:34:39.6890066Z"
+}
+#END
+#DATA manifest strategies/manifest.json lines=43
+{
+  "created": "2026-11-02T19:29:48.212Z",
+  "baseline": "S000",
+  "engines": {
+    "v1": {
+      "file": "v1.cjs",
+      "sha256": "921bdbc3319c58d61976a9275c972fcaf28dbee9c141b61a8aa3261564553027",
+      "from": "tools/sz-engine.cjs"
+    },
+    "risk1": {
+      "file": "risk1.cjs",
+      "sha256": "b843afa96c926358f9d491d7b27a4212d515a216cf297deef2bac8cbbceef925",
+      "from": "tools/sz-risk.cjs",
+      "registered": "2026-11-03T01:45:46.501Z",
+      "history": []
+    },
+    "v3": {
+      "file": "v3.cjs",
+      "sha256": "9fa7da1b1b105582bcd7788b299db080db8c843ee6e5404d5b924f2489dbb057",
+      "from": "tools/sz-engine3.cjs",
+      "registered": "2026-11-03T01:45:46.505Z",
+      "history": []
+    }
+  },
+  "frozen": {
+    "S000": "3388119b754c14e14c2a7f2fd63593dd7b10c51322436e9d95aa5858e1492cbe",
+    "R000": "9f3115736d0c5751ee05d95c24b2784fc5bc68ff119ca288f51a3ec38b457106"
+  },
+  "ref": {
+    "dataset": "5cd608c132",
+    "files": {
+      "030530_AL_120t_20261102.csv:09bb6c0846231a47:d541c56d082d": {
+        "n": 9,
+        "sum": 6.8827433475109965
+      },
+      "184230_AL_120t_20261102.csv:1fad4422fc52c18c:10004b164ab9": {
+        "n": 5,
+        "sum": 9.743178851093177
+      }
+    }
+  },
+  "seeded": true
+}
+#END
+#DATA tree tools files=22 [path size mtime sha12] lines=22
+tools/chart_build.mjs  21615  2026-11-03 08:47  d9a6a49a9832
+tools/replay_ref.mjs  4068  2026-11-03 02:51  93fbcbfa3d8e
+tools/sz-engine.cjs  10539  2026-11-03 04:13  921bdbc3319c
+tools/sz-engine3.cjs  9768  2026-11-03 11:13  9fa7da1b1b10
+tools/sz-guard-selftest.cjs  9308  2026-11-03 15:33  18362a7ac704
+tools/sz-guard.cjs  9971  2026-11-03 15:33  19607cabd0a2
+tools/sz-guard11.cjs  11509  2026-11-03 16:34  73d188febcf9
+tools/sz-lab-guard.cjs  19744  2026-11-03 15:47  ad16648f7587
+tools/sz-lab-guard11.cjs  28892  2026-11-03 16:34  af796f31ead3
+tools/sz-lab.cjs  24115  2026-11-03 14:50  5da31163bca4
+tools/sz-lab3.cjs  29996  2026-11-03 11:13  4a921c36e331
+tools/sz-lab3.cjs.bak21a  29062  2026-11-03 11:01  -
+tools/sz-probe.cjs  1650  2026-11-03 10:24  f8a57abe368f
+tools/sz-render.js  10070  2026-11-03 04:13  60ece9d10f08
+tools/sz-risk-selftest.cjs  9778  2026-11-03 10:35  360b361c71ad
+tools/sz-risk-selftest.cjs.bak20a  9254  2026-11-03 10:24  -
+tools/sz-risk.cjs  11872  2026-11-03 10:28  b843afa96c92
+tools/sz-risk.cjs.bak20a  11778  2026-11-03 10:24  -
+tools/sz-run.cjs  13906  2026-11-03 04:13  2e6836d137bf
+tools/sz-selftest.cjs  5921  2026-11-03 04:13  b99a1669383b
+tools/ui/probe.cjs  9265  2026-11-04 15:17  3690760355f4
+tools/ui/report.cjs  12113  2026-11-04 15:17  997e36f89688
+#END
+#DATA tree setup files=32 [path size mtime sha12] lines=32
+setup/00_run_all.ps1  840  2026-11-03 02:23  9978bad1c3fa
+setup/01_scaffold.ps1  2899  2026-11-03 02:23  adf36318ba47
+setup/02_core.ps1  4778  2026-11-03 02:23  76baa5bcd572
+setup/03_momentum.ps1  2552  2026-11-03 02:23  435fe6c867da
+setup/04_nmacd.ps1  2597  2026-11-03 02:23  96811372c2c9
+setup/05_bigprint.ps1  2215  2026-11-03 02:23  142d912c5aac
+setup/06_dayamount.ps1  3330  2026-11-03 02:23  e710cd60cb18
+setup/07_tests.ps1  15902  2026-11-03 02:23  e9f5ea3e2a23
+setup/08_verify.ps1  7055  2026-11-03 02:23  8c03aa02e0fa
+setup/09_fetch_ticks.ps1  13008  2026-11-03 08:54  18460ac7a97a
+setup/09_fetch_ticks.ps1.bak16  12688  2026-11-03 03:01  -
+setup/10_replay.ps1  5711  2026-11-03 02:51  3e04e8ad0c1f
+setup/11_chart.ps1  24699  2026-11-03 04:00  8ad1689052cd
+setup/12_fetch_daily.ps1  6995  2026-11-03 08:54  3c7638a31a09
+setup/12_fetch_daily.ps1.bak16  6701  2026-11-03 03:42  -
+setup/13_trade.ps1  46422  2026-11-03 04:13  b4a1fdd7f559
+setup/13_trade.ps1.bak  44006  2026-11-03 04:02  -
+setup/13a_patch.ps1  12539  2026-11-03 04:12  415b1f559141
+setup/14_lab.ps1  27066  2026-11-03 04:29  fc6d9d701813
+setup/15_candidates.ps1  2376  2026-11-03 04:36  ed2866f41339
+setup/16_patch_codes.ps1  2737  2026-11-03 08:54  f5f5c64b240c
+setup/17_leader.ps1  4012  2026-11-03 09:29  d672c3f01e41
+setup/20_risk.ps1  28285  2026-11-03 10:23  4a78adb04d2a
+setup/20a_risk_fix.ps1  3409  2026-11-03 10:28  bd064a018a9b
+setup/20b_selftest_fix.ps1  3613  2026-11-03 10:35  b2fc2a31ffc7
+setup/21_engine_v3.ps1  44323  2026-11-03 11:04  d453a1a53325
+setup/21_engine_v3.ps1.bak21a  43376  2026-11-03 10:45  -
+setup/22_guard.ps1  22543  2026-11-03 15:33  b0ef27061eaf
+setup/22b_guard_lab.ps1  21308  2026-11-03 15:47  620618fc463b
+setup/22c_guard11.ps1  46280  2026-11-03 16:34  070c76e19c7c
+setup/29_probe.ps1  25826  2026-11-04 15:17  b3da7a328f9f
+setup/_lib.ps1  3037  2026-11-03 02:23  cd07e96d6fbd
+#END
+#DATA tree strategies files=82 [path size mtime sha12] lines=82
+strategies/candidates/C001.json  286  2026-11-03 04:29  853fb89488e3
+strategies/candidates/C002.json  224  2026-11-03 04:29  404dc741fe99
+strategies/candidates/C003.json  243  2026-11-03 04:29  a8d900fa0b36
+strategies/candidates/C004.json  244  2026-11-03 04:29  19ab949d4b08
+strategies/candidates/C005.json  252  2026-11-03 04:29  616bb9ff4a8f
+strategies/candidates/C006.json  243  2026-11-03 04:29  fce8e5303c26
+strategies/candidates/C007.json  173  2026-11-03 04:29  1d0ccb51ca27
+strategies/candidates/C008.json  200  2026-11-03 04:29  e95d09bb0ab1
+strategies/candidates/C009.json  179  2026-11-03 04:29  f0ad05503f1c
+strategies/candidates/C010.json  186  2026-11-03 04:29  0599bf6763af
+strategies/candidates/C011.json  231  2026-11-03 04:29  70dbaed76bea
+strategies/candidates/C012.json  171  2026-11-03 04:29  b9d84c54d47d
+strategies/candidates/C013.json  275  2026-11-03 04:36  0755a3016581
+strategies/candidates/C014.json  277  2026-11-03 04:36  86d3d45e9762
+strategies/candidates/C015.json  280  2026-11-03 04:36  933b0c077d20
+strategies/candidates/C016.json  277  2026-11-03 04:36  80ab61d9d018
+strategies/candidates/C017.json  303  2026-11-03 04:36  994611aad8d9
+strategies/candidates/C018.json  333  2026-11-03 04:36  b250b1b68ae7
+strategies/candidates/C019.json  382  2026-11-03 04:36  766dac7b06a0
+strategies/candidates/C020.json  341  2026-11-03 04:36  ed67f12df589
+strategies/candidates/C021.json  203  2026-11-03 11:17  25b7677b3400
+strategies/candidates/C022.json  219  2026-11-03 11:17  bb7c89cd666e
+strategies/candidates/C023.json  211  2026-11-03 11:17  6af17a264ff4
+strategies/candidates/C024.json  252  2026-11-03 14:50  36cce904a718
+strategies/candidates/C025.json  268  2026-11-03 14:50  3c4cf738ed31
+strategies/candidates/C026.json  268  2026-11-03 14:50  4097345e2e28
+strategies/candidates/C027.json  267  2026-11-03 14:50  d54fade78d9f
+strategies/candidates/C028.json  283  2026-11-03 14:50  eed5bb5dfe61
+strategies/engines/risk1.cjs  11872  2026-11-03 10:45  b843afa96c92
+strategies/engines/v1.cjs  10539  2026-11-03 04:29  921bdbc3319c
+strategies/engines/v3.cjs  9768  2026-11-03 10:45  9fa7da1b1b10
+strategies/frozen/R000.json  1233  2026-11-03 04:29  8036cf4e2d91
+strategies/frozen/S000.json  1235  2026-11-03 04:29  2efa1e7aa0ba
+strategies/guard/GP000.json  51  2026-11-03 15:33  813e9b6299d5
+strategies/guard/GP001.json  92  2026-11-03 15:33  9fefaa083536
+strategies/guard/GP002.json  87  2026-11-03 15:33  7b67d4ad4e40
+strategies/guard/GP003.json  84  2026-11-03 15:33  4adcd695ea3f
+strategies/guard/GP004.json  92  2026-11-03 15:33  991928e9bf2b
+strategies/guard/GP005.json  92  2026-11-03 15:33  3530860b60dd
+strategies/guard/GP006.json  98  2026-11-03 15:33  6c4a522329be
+strategies/guard/GP010.json  229  2026-11-03 15:33  589d1c985e6e
+strategies/guard/GP011.json  316  2026-11-03 15:33  d9ce85b00468
+strategies/guard/manifest.json  109  2026-11-03 15:33  5587fc2b6cb2
+strategies/guard11/GP000.json  43  2026-11-03 16:34  e2ccfda2a901
+strategies/guard11/GP020.json  100  2026-11-03 16:34  1a3fa80585f4
+strategies/guard11/GP021.json  116  2026-11-03 16:34  14e13e92deda
+strategies/guard11/GP022.json  92  2026-11-03 16:34  86ba1b14210e
+strategies/guard11/GP023.json  146  2026-11-03 16:34  3bcdc98d9e28
+strategies/guard11/GP024.json  156  2026-11-03 16:34  ef69faafb910
+strategies/guard11/GP025.json  156  2026-11-03 16:34  c11e79b6458d
+strategies/guard11/GP026.json  188  2026-11-03 16:34  420480b62baa
+strategies/guard11/manifest.json  207  2026-11-03 16:34  f64fc218182d
+strategies/ledger.csv  16773  2026-11-03 14:50  c7f7c4c11db6
+strategies/ledger3.csv  23513  2026-11-03 11:13  5779333414a8
+strategies/manifest.json  1232  2026-11-03 11:13  c23c29824398
+strategies/risk/RP000.json  50  2026-11-03 10:24  c31c6c0f367b
+strategies/risk/RP001.json  159  2026-11-03 10:24  5eb856df4961
+strategies/risk/RP002.json  252  2026-11-03 10:24  218c869175be
+strategies/risk/RP003.json  473  2026-11-03 10:24  9f14f9735427
+strategies/risk/RP004.json  625  2026-11-03 10:24  5a1d1e53ed13
+strategies/risk/RP005.json  167  2026-11-03 11:13  bb74dbf88623
+strategies/risk/RPK1.json  454  2026-11-03 10:24  9e687944115b
+strategies/risk/RPK2.json  367  2026-11-03 10:24  c595bfc243bc
+strategies/survivors/C003.json  2179  2026-11-03 14:50  2e2bd4130e14
+strategies/survivors/C006.json  1837  2026-11-03 14:50  8a412514c872
+strategies/survivors/C010.json  1796  2026-11-03 14:50  d8ba984fa4f2
+strategies/survivors/C013.json  2041  2026-11-03 14:50  81e8252a5a08
+strategies/survivors/C022.json  1569  2026-11-03 14:50  8f666a74142e
+strategies/survivors/C023.json  1562  2026-11-03 14:50  dcfdd1c96af1
+strategies/survivors/C026.json  1625  2026-11-03 14:50  83662f92b1e4
+strategies/survivors3/C006__RP000__indep.json  3467  2026-11-03 11:13  bcb28d67cc88
+strategies/survivors3/C006__RP000__port-r2.json  3470  2026-11-03 11:13  aea3e823cd87
+strategies/survivors3/C006__RP000__port.json  3465  2026-11-03 11:13  9c14a93f678b
+strategies/survivors3/C006__RP005__indep.json  3469  2026-11-03 11:13  ece42ad201bf
+strategies/survivors3/C006__RP005__port-r2.json  3472  2026-11-03 11:13  705d5b84bee3
+strategies/survivors3/C006__RP005__port.json  3467  2026-11-03 11:13  c5b57b80f6d3
+strategies/survivors3/C013__RP000__indep.json  3464  2026-11-03 11:13  aba298239073
+strategies/survivors3/C013__RP000__port-r2.json  3469  2026-11-03 11:13  c6aa6e55db19
+strategies/survivors3/C013__RP000__port.json  3462  2026-11-03 11:13  c689b7861666
+strategies/survivors3/C013__RP005__indep.json  3466  2026-11-03 11:13  dc53c16656f6
+strategies/survivors3/C013__RP005__port-r2.json  3471  2026-11-03 11:13  adfb29dbb6e1
+strategies/survivors3/C013__RP005__port.json  3464  2026-11-03 11:13  862505a33b99
+#END
+#DATA head40 tools/chart_build.mjs (total 270 lines) lines=40
+   1: import fs from 'node:fs';
+   2: import path from 'node:path';
+   3: 
+   4: const A = Object.fromEntries(process.argv.slice(2).map(s => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; }));
+   5: const num = k => { const v = Number(A[k]); if (!Number.isFinite(v)) throw new Error('bad param ' + k + '=' + A[k]); return v; };
+   6: const toSec = t => (+t.slice(0, 2)) * 3600 + (+t.slice(2, 4)) * 60 + (+t.slice(4, 6));
+   7: const P = {
+   8:   p1: num('p1'), p2: num('p2'), p3: num('p3'), momLen: num('momLen'), safeTh: num('safeTh'), strongA: num('strongA'),
+   9:   bigMode: A.bigMode, bigTh: num('bigTh'), bigIncl: A.bigIncl === '1', relWin: num('relWin'), relK: num('relK'), armSkip: num('armSkip'),
+  10:   maType: A.maType, maLen: num('maLen'), stLen: num('stLen'), stMult: num('stMult'), stAtr: A.stAtr,
+  11:   tickAbs: num('tickAbs'), tickK: num('tickK'), useEma: A.useEma === '1', useTick: A.useTick === '1', useDisp: A.useDisp === '1',
+  12:   limMode: A.limMode, limPct: num('limPct'), pbPct: num('pbPct'), dispMax: num('dispMax'),
+  13:   dispUntil: A.dispUntil === 'all' ? -1 : toSec(A.dispUntil.padEnd(6, '0')),
+  14:   openMults: String(A.openMults || '').split(',').map(Number).filter(x => x > 0)
+  15: };
+  16: P.maName = P.maType.toUpperCase() + P.maLen;
+  17: 
+  18: const TPL = String.raw`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>__TITLE__</title>
+  19: <style>
+  20: html,body{margin:0;background:#111;color:#ddd;font:12px Consolas,'Malgun Gothic',monospace;overflow:hidden}
+  21: #bar{height:30px;display:flex;align-items:center;gap:8px;padding:0 8px;background:#1b1b1b;white-space:nowrap;overflow:hidden}
+  22: button{background:#333;color:#ddd;border:1px solid #555;padding:2px 8px;cursor:pointer}
+  23: #tip{position:absolute;left:8px;top:36px;background:rgba(0,0,0,.8);padding:4px 6px;white-space:pre;pointer-events:none;display:none}
+  24: canvas{display:block;cursor:crosshair}
+  25: .lg{color:#999}
+  26: </style></head><body>
+  27: <div id="bar"><b id="ttl"></b><button id="fit">당일</button><button id="all">전체</button><span id="info"></span>
+  28: <span class="lg">| <span style="color:#37e05a">●</span>1억 <span style="color:#ffd400">▲</span>ARM <span style="color:#ff4dff">▲</span>진입 <span style="color:#ff3030">×</span>상한가 <span style="color:#b070ff">×</span>이격 <span style="color:#aaa">×</span>EMA <span style="color:#ff9a30">×</span>체결</span></
+  29: <canvas id="c"></canvas><div id="tip"></div>
+  30: <script>
+  31: var D=__DATA__;
+  32: var B=D.bars,N=B.length,cv=document.getElementById('c'),g=cv.getContext('2d'),tip=document.getElementById('tip');
+  33: var T=0,DT=1,O=2,HI=3,LO=4,C=5,REF=6,MOM=7,NN=8,SG=9,AMT=10,TAA=11,FL=12,MA=13,ST=14,SD=15,R1=16,R5=17,DO=18,DSP=19;
+  34: var AX=78,XH=18,W=0,H=0,start=0,count=N,mx=-1,my=-1,drag=null,UP='#e34a4a',DN='#3f7fd6';
+  35: document.getElementById('ttl').textContent=D.title;document.getElementById('info').textContent=D.info;
+  36: function has(i,f){return (B[i][FL]&f)!==0;}
+  37: function sec(t){return (+t.slice(0,2))*3600+(+t.slice(2,4))*60+(+t.slice(4,6));}
+  38: var tStart=0;for(var k=0;k<N;k++){if(has(k,16)){tStart=k;break;}}
+  39: function clampView(){count=Math.max(20,Math.min(N,count));start=Math.max(0,Math.min(N-count,start));}
+  40: function fitDay(){start=tStart;count=N-tStart;draw();}
+#END
+#DATA head40 setup/11_chart.ps1 (total 327 lines) lines=40
+   1: ﻿#requires -Version 5.1
+   2: # mom-trader : 틱 CSV -> 지표/필터 계산 -> 독립 HTML 차트 (영웅문 대조용)
+   3: param(
+   4:   [string]$Root = 'E:\parent\projects\rea\projects\mom-trader',
+   5:   [string]$Match = '_AL_',
+   6:   [int]$MomLen = 50, [double]$SafeTh = 100,
+   7:   [int]$P1 = 7, [int]$P2 = 14, [int]$P3 = 5,
+   8:   [double]$StrongA = 1000000000,
+   9:   [ValidateSet('abs','rel')][string]$BigMode = 'abs',
+  10:   [double]$BigTh = 50000000,
+  11:   [switch]$BigInclusive,
+  12:   [int]$RelWin = 20, [double]$RelK = 3,
+  13:   [int]$ArmSkip = 1,
+  14:   [ValidateSet('ema','sma')][string]$MaType = 'ema', [int]$MaLen = 200,
+  15:   [int]$StLen = 14, [double]$StMult = 1.5, [ValidateSet('rma','sma')][string]$StAtr = 'rma',
+  16:   [double]$TickAbs = 0, [double]$TickK = 1.0,
+  17:   [ValidateSet('off','block','pullback')][string]$LimMode = 'pullback',
+  18:   [double]$LimPct = 29, [double]$PbPct = 5,
+  19:   [double]$DispMax = 108, [string]$DispUntil = '1000',
+  20:   [switch]$NoEmaFilter, [switch]$NoTickFilter, [switch]$NoDispFilter,
+  21:   [string]$OpenMults = '1.03,1.097,1.15',
+  22:   [switch]$NoOpen
+  23: )
+  24: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+  25: $ErrorActionPreference = 'Stop'
+  26: function Ok([string]$m)  { Write-Host "[성공] $m" -ForegroundColor Green }
+  27: function Bad([string]$m) { Write-Host "[실패] $m" -ForegroundColor Red }
+  28: if ($DispUntil -ne 'all' -and $DispUntil -notmatch '^\d{4}$') { Bad "-DispUntil 은 HHMM 또는 all (입력: $DispUntil)"; exit 1 }
+  29: 
+  30: $tickDir = Join-Path $Root 'data\ticks'; $dailyDir = Join-Path $Root 'data\daily'
+  31: $outDir = Join-Path $Root 'data\chart'; $toolDir = Join-Path $Root 'tools'
+  32: New-Item -ItemType Directory -Force -Path $outDir, $toolDir | Out-Null
+  33: if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Bad 'node 를 찾을 수 없음'; exit 1 }
+  34: 
+  35: $js = @'
+  36: import fs from 'node:fs';
+  37: import path from 'node:path';
+  38: 
+  39: const A = Object.fromEntries(process.argv.slice(2).map(s => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; }));
+  40: const num = k => { const v = Number(A[k]); if (!Number.isFinite(v)) throw new Error('bad param ' + k + '=' + A[k]); return v; };
+#END
+#DATA dir data/ticks files=10 bytes=736614 lines=10
+data/ticks/0011A0_AL_120t_20261102.csv  72318  2026-11-03 08:54
+data/ticks/030530_AL_120t_20261102.csv  150913  2026-11-03 03:33
+data/ticks/030530_KRX_120t_20261102.csv  106795  2026-11-03 02:49
+data/ticks/067570_AL_120t_20261102.csv  5881  2026-11-03 08:46
+data/ticks/184230_AL_120t_20261102.csv  71889  2026-11-03 03:33
+data/ticks/184230_KRX_120t_20261102.csv  71889  2026-11-03 02:50
+data/ticks/225530_AL_120t_20261102.csv  57058  2026-11-03 08:46
+data/ticks/232680_AL_120t_20261102.csv  114039  2026-11-03 08:46
+data/ticks/263860_AL_120t_20261102.csv  80022  2026-11-03 08:46
+data/ticks/377450_AL_120t_20261102.csv  5810  2026-11-03 08:46
+#END
+#DATA dir data/daily files=8 bytes=189839 lines=8
+data/daily/0011A0.csv  7292  2026-11-03 08:54
+data/daily/030530.csv  27046  2026-11-03 03:44
+data/daily/067570.csv  25200  2026-11-03 08:46
+data/daily/184230.csv  25073  2026-11-03 03:44
+data/daily/225530.csv  25050  2026-11-03 08:46
+data/daily/232680.csv  25843  2026-11-03 08:46
+data/daily/263860.csv  27004  2026-11-03 08:46
+data/daily/377450.csv  27331  2026-11-03 08:47
+#END
+#DATA dir data/screen lines=1
+(missing)
+#END
+#DATA dir data/rest lines=1
+(missing)
+#END
+#DATA dir logs files=16 bytes=2017159 lines=16
+logs/raw-0011A0-120-p1.json  171505  2026-11-03 08:54
+logs/raw-030530-120-p1.json  172135  2026-11-03 03:33
+logs/raw-067570-120-p1.json  15688  2026-11-03 08:46
+logs/raw-184230-120-p1.json  167981  2026-11-03 03:33
+logs/raw-225530-120-p1.json  167881  2026-11-03 08:46
+logs/raw-232680-120-p1.json  172093  2026-11-03 08:46
+logs/raw-263860-120-p1.json  171795  2026-11-03 08:46
+logs/raw-377450-120-p1.json  15277  2026-11-03 08:46
+logs/raw-daily-0011A0.json  36108  2026-11-03 08:54
+logs/raw-daily-030530.json  134415  2026-11-03 03:44
+logs/raw-daily-067570.json  130955  2026-11-03 08:46
+logs/raw-daily-184230.json  130562  2026-11-03 03:44
+logs/raw-daily-225530.json  130769  2026-11-03 08:46
+logs/raw-daily-232680.json  132511  2026-11-03 08:46
+logs/raw-daily-263860.json  133598  2026-11-03 08:46
+logs/raw-daily-377450.json  133886  2026-11-03 08:47
+#END

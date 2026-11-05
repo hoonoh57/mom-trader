@@ -1,0 +1,50 @@
+{
+ "step": "S0.probe",
+ "version": "probe-1.0",
+ "started": "2026-11-04T06:20:47.346Z",
+ "env": {
+  "node": "v24.19.0",
+  "ps": "5.1.26100.9818",
+  "os": "win32-x64",
+  "report": "report-1.0",
+  "envFile": "found",
+  "secretsMasked": "7"
+ },
+ "checks": [
+  {
+   "name": "selftest: mask secrets/bearer/account, keep prices",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: env loader picks only secret-like keys",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: utf8 hangul roundtrip without BOM",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: size cap and FAIL report with code context",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: PASS report is compact",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "data": [
+  {
+   "title": "find /'\\uD55C\\uAE00'\\.Length/ in setup hits=14 files=14",
+   "body": "== setup/09_fetch_ticks.ps1\n>   21: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }\n== setup/10_replay.ps1\n>    9: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }\n== setup/11_chart.ps1\n>   24: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }\n== setup/12_fetch_daily.ps1\n>   12: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }\n== setup/13_trade.ps1\n>   31: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/13a_patch.ps1\n>    2: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/14_lab.ps1\n>   12: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/15_candidates.ps1\n>    4: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/16_patch_codes.ps1\n>    2: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/17_leader.ps1\n>    9: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/20_risk.ps1\n>    6: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/20a_risk_fix.ps1\n>    3: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/20b_selftest_fix.ps1\n>    3: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }\n== setup/21_engine_v3.ps1\n>   14: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }"
+  }
+ ],
+ "errors": [],
+ "notes": [],
+ "verdict": "PASS",
+ "ended": "2026-11-04T06:20:47.376Z"
+}

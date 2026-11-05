@@ -1,8 +1,0 @@
-# mirror: only allowlisted files are copied by setup\41_pub.ps1
-*.bak*
-.env*
-*.env
-node_modules/
-data/
-logs/
-*.log

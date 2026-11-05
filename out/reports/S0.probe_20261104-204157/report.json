@@ -1,0 +1,54 @@
+{
+ "step": "S0.probe",
+ "version": "probe-1.0",
+ "started": "2026-11-04T11:41:57.053Z",
+ "env": {
+  "node": "v24.19.0",
+  "ps": "5.1.26100.9818",
+  "os": "win32-x64",
+  "report": "report-1.0",
+  "envFile": "found",
+  "secretsMasked": "7"
+ },
+ "checks": [
+  {
+   "name": "selftest: mask secrets/bearer/account, keep prices",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: env loader picks only secret-like keys",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: utf8 hangul roundtrip without BOM",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: size cap and FAIL report with code context",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: PASS report is compact",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "data": [
+  {
+   "title": "show strategies/engines/v1.cjs:140-198 (total 198 lines, sha12 921bdbc3319c)",
+   "body": "  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;\n  141:       if (pos && i > pos.idx) {\n  142:         if (b.h > pos.hi) pos.hi = b.h;\n  143:         if (b.l < pos.lo) pos.lo = b.l;\n  144:         const stopPx = P.StopPct > 0 ? pos.entry * (1 - P.StopPct / 100) : -1;\n  145:         if (b.l <= stopPx) closeTrade(i, Math.min(b.o, stopPx), 'stop');\n  146:         else if (b.hms >= P._exitT) closeTrade(i, b.c, 'time');\n  147:         else {\n  148:           if (!pos.reached && (b.c / pos.entry - 1) * 100 >= P.TargetPct) pos.reached = true;\n  149:           if (b.c > pos.peakC) pos.peakC = b.c;\n  150:           const s = ind.safe[i];\n  151:           const rule = s ? (pos.reached ? P.SafeAbove : P.SafeBelow) : (pos.reached ? P.UnsafeAbove : P.UnsafeBelow);\n  152:           if (hit(rule, i, ind, b, pos, P)) {\n  153:             const cur = (b.c / pos.entry - 1) * 100 - P.FeePct;\n  154:             if (s && noLoss && cur < minPct) { pos.held++; held++; }\n  155:             else closeTrade(i, b.c, (s ? 'S' : 'U') + (pos.reached ? '+' : '-') + ':' + rule);\n  156:           }\n  157:         }\n  158:         if (!pos) continue;\n  159:       }\n  160:       const safe = ind.safe[i];\n  161:       const baseOk = safe && ctx.dayComplete && ind.taamt[i] > P.StrongA && (i - ind.dayStart[i]) >= P.ArmSkip;\n  162:       if (armMode === 'state') {\n  163:         const want = !pos && baseOk && ind.n[i] > 0;\n  164:         if (want && !armed) { arms++; marks.push({ i, k: 'arm' }); }\n  165:         armed = want;\n  166:       } else {\n  167:         if (armed && (!safe || ind.n[i] < 0)) armed = false;\n  168:         const prevSame = i > 0 && (!P.ArmSameSession || bars[i - 1].d === b.d);\n  169:         const crossUp = prevSame && ind.n[i - 1] <= 0 && ind.n[i] > 0;\n  170:         if (!pos && !armed && crossUp && baseOk) { armed = true; arms++; marks.push({ i, k: 'arm' }); }\n  171:       }\n  172:       if (pos || !armed) continue;\n  173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));\n  174:       if (!signal) continue;\n  175:       sigs++;\n  176:       let why = null;\n  177:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';\n  178:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';\n  179:       else if (i - lastExit <= gap) why = 'gap';\n  180:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';\n  181:       else if (!(b.c > ind.ema[i])) why = 'ema';\n  182:       else if (b.hms < P._dispU && ind.disp[i] > P.DispMax) why = 'disp';\n  183:       else if (!ind.tickOk[i]) why = 'tick';\n  184:       if (why) { rej[why]++; marks.push({ i, k: 'rej', why }); continue; }\n  185:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0 };\n  186:       armed = false;\n  187:       marks.push({ i, k: 'entry' });\n  188:     }\n  189:     if (pos && lastI >= 0) closeTrade(lastI, bars[lastI].c, 'eod');\n  190:     return { trades, marks, rej, arms, sigs, limMode, pbDone, held };\n  191:   }\n  192:   function summarize(tr) {\n  193:     const n = tr.length; let w = 0, sum = 0, best = -Infinity, worst = Infinity, mfe = 0;\n  194:     for (const t of tr) { if (t.ret > 0) w++; sum += t.ret; best = Math.max(best, t.ret); worst = Math.min(worst, t.ret); mfe += t.mfe; }\n  195:     return { n, w, sum, avg: n ? sum / n : 0, best: n ? best : 0, worst: n ? worst : 0, avgMfe: n ? mfe / n : 0 };\n  196:   }\n  197:   return { RULES, DEFAULTS, prep, validate, ema, supertrend, compute, simulate, summarize };\n  198: });"
+  },
+  {
+   "title": "show strategies/frozen/S000.json:1-60 (total 60 lines, sha12 2efa1e7aa0ba)",
+   "body": "    1: {\n    2:   \"id\": \"S000\",\n    3:   \"name\": \"SafeZone v1 기준선\",\n    4:   \"engine\": \"v1\",\n    5:   \"base\": null,\n    6:   \"frozen\": true,\n    7:   \"created\": \"2026-11-02T19:29:48.212Z\",\n    8:   \"note\": \"13_trade + 13a_patch 기본값\",\n    9:   \"params\": {\n   10:     \"MomLen\": 50,\n   11:     \"SafeTh\": 100,\n   12:     \"SafeExitTh\": 100,\n   13:     \"SafeConfirm\": 1,\n   14:     \"P1\": 7,\n   15:     \"P2\": 14,\n   16:     \"P3\": 5,\n   17:     \"StrongA\": 1000000000,\n   18:     \"BigMode\": \"abs\",\n   19:     \"BigTh\": 50000000,\n   20:     \"RelWin\": 20,\n   21:     \"RelK\": 3,\n   22:     \"BigNeedUp\": 1,\n   23:     \"BigNeedST\": 1,\n   24:     \"ArmSkip\": 1,\n   25:     \"ArmSameSession\": 1,\n   26:     \"EmaLen\": 200,\n   27:     \"StLen\": 14,\n   28:     \"StMult\": 1.5,\n   29:     \"TickScope\": 120,\n   30:     \"TickK\": 1,\n   31:     \"TickAbs\": 0,\n   32:     \"DispMax\": 112,\n   33:     \"DispUntil\": 1000,\n   34:     \"LimPct\": 29,\n   35:     \"SurgePct\": 25,\n   36:     \"LimMode\": \"pullback\",\n   37:     \"SurgeMode\": \"pullback\",\n   38:     \"PbPct\": 5,\n   39:     \"EntryStart\": 900,\n   40:     \"EntryEnd\": 1520,\n   41:     \"ExitTime\": 1520,\n   42:     \"SessionStartMax\": 905,\n   43:     \"TargetPct\": 5,\n   44:     \"StopPct\": 3,\n   45:     \"TrailPct\": 2,\n   46:     \"SafeBelow\": \"hold\",\n   47:     \"SafeAbove\": \"hold\",\n   48:     \"UnsafeBelow\": \"macd_sig\",\n   49:     \"UnsafeAbove\": \"immediate\",\n   50:     \"FeePct\": 0.25,\n   51:     \"SlipPct\": 0,\n   52:     \"MaxTrades\": 10,\n   53:     \"ArmMode\": \"state\",\n   54:     \"SafeNoLoss\": 1,\n   55:     \"SafeMinPct\": 0,\n   56:     \"ReentryGap\": 0,\n   57:     \"Match\": \"_AL_120t_\",\n   58:     \"Date\": \"\"\n   59:   }\n   60: }"
+  }
+ ],
+ "errors": [],
+ "notes": [],
+ "verdict": "PASS",
+ "ended": "2026-11-04T11:41:57.075Z"
+}

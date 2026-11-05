@@ -1,0 +1,59 @@
+  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;
+  141:       if (pos && i > pos.idx) {
+  142:         if (b.h > pos.hi) pos.hi = b.h;
+  143:         if (b.l < pos.lo) pos.lo = b.l;
+  144:         const stopPx = P.StopPct > 0 ? pos.entry * (1 - P.StopPct / 100) : -1;
+  145:         if (b.l <= stopPx) closeTrade(i, Math.min(b.o, stopPx), 'stop');
+  146:         else if (b.hms >= P._exitT) closeTrade(i, b.c, 'time');
+  147:         else {
+  148:           if (!pos.reached && (b.c / pos.entry - 1) * 100 >= P.TargetPct) pos.reached = true;
+  149:           if (b.c > pos.peakC) pos.peakC = b.c;
+  150:           const s = ind.safe[i];
+  151:           const rule = s ? (pos.reached ? P.SafeAbove : P.SafeBelow) : (pos.reached ? P.UnsafeAbove : P.UnsafeBelow);
+  152:           if (hit(rule, i, ind, b, pos, P)) {
+  153:             const cur = (b.c / pos.entry - 1) * 100 - P.FeePct;
+  154:             if (s && noLoss && cur < minPct) { pos.held++; held++; }
+  155:             else closeTrade(i, b.c, (s ? 'S' : 'U') + (pos.reached ? '+' : '-') + ':' + rule);
+  156:           }
+  157:         }
+  158:         if (!pos) continue;
+  159:       }
+  160:       const safe = ind.safe[i];
+  161:       const baseOk = safe && ctx.dayComplete && ind.taamt[i] > P.StrongA && (i - ind.dayStart[i]) >= P.ArmSkip;
+  162:       if (armMode === 'state') {
+  163:         const want = !pos && baseOk && ind.n[i] > 0;
+  164:         if (want && !armed) { arms++; marks.push({ i, k: 'arm' }); }
+  165:         armed = want;
+  166:       } else {
+  167:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+  168:         const prevSame = i > 0 && (!P.ArmSameSession || bars[i - 1].d === b.d);
+  169:         const crossUp = prevSame && ind.n[i - 1] <= 0 && ind.n[i] > 0;
+  170:         if (!pos && !armed && crossUp && baseOk) { armed = true; arms++; marks.push({ i, k: 'arm' }); }
+  171:       }
+  172:       if (pos || !armed) continue;
+  173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+  174:       if (!signal) continue;
+  175:       sigs++;
+  176:       let why = null;
+  177:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';
+  178:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';
+  179:       else if (i - lastExit <= gap) why = 'gap';
+  180:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';
+  181:       else if (!(b.c > ind.ema[i])) why = 'ema';
+  182:       else if (b.hms < P._dispU && ind.disp[i] > P.DispMax) why = 'disp';
+  183:       else if (!ind.tickOk[i]) why = 'tick';
+  184:       if (why) { rej[why]++; marks.push({ i, k: 'rej', why }); continue; }
+  185:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0 };
+  186:       armed = false;
+  187:       marks.push({ i, k: 'entry' });
+  188:     }
+  189:     if (pos && lastI >= 0) closeTrade(lastI, bars[lastI].c, 'eod');
+  190:     return { trades, marks, rej, arms, sigs, limMode, pbDone, held };
+  191:   }
+  192:   function summarize(tr) {
+  193:     const n = tr.length; let w = 0, sum = 0, best = -Infinity, worst = Infinity, mfe = 0;
+  194:     for (const t of tr) { if (t.ret > 0) w++; sum += t.ret; best = Math.max(best, t.ret); worst = Math.min(worst, t.ret); mfe += t.mfe; }
+  195:     return { n, w, sum, avg: n ? sum / n : 0, best: n ? best : 0, worst: n ? worst : 0, avgMfe: n ? mfe / n : 0 };
+  196:   }
+  197:   return { RULES, DEFAULTS, prep, validate, ema, supertrend, compute, simulate, summarize };
+  198: });

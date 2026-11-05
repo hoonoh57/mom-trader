@@ -1,0 +1,534 @@
+== tools/sz-lab-guard.cjs
+     8: const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+     9: const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+    10: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+>   11: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    12: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk'), GDIR = path.join(SD, 'guard');
+    13: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard');
+    14: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+  --
+    10: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+    11: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    12: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk'), GDIR = path.join(SD, 'guard');
+>   13: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard');
+    14: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    15: fs.mkdirSync(OUT, { recursive: true });
+    16: if (!fs.existsSync(MAN)) die('manifest missing');
+  --
+    24:   return require(f);
+    25: }
+    26: const V1 = loadEng('v1'), R = loadEng('risk1'), E3 = loadEng('v3')(V1, R);
+>   27: const GMF = path.join(GDIR, 'manifest.json'), GF = path.join(ROOT, 'tools', 'sz-guard.cjs');
+    28: if (!fs.existsSync(GMF) || !fs.existsSync(GF)) die('guard not registered: run 22_guard.ps1');
+    29: if (sha(fs.readFileSync(GF)) !== readJson(GMF).sha256) die('guard hash mismatch (sz-guard.cjs modified)');
+    30: const G = require(GF);
+  --
+   121: const lib = {};
+   122: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   123:   const s = readJson(path.join(FRZ, f));
+>  124:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   125:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   126: }
+   127: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   122: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   123:   const s = readJson(path.join(FRZ, f));
+   124:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+>  125:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   126: }
+   127: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+   128: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  --
+== tools/sz-lab-guard11.cjs
+    13: const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+    14: const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+    15: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+>   16: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    17: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+    18: const GDIR0 = path.join(SD, 'guard'), GDIR = path.join(SD, 'guard11');
+    19: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard11');
+  --
+    16: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    17: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+    18: const GDIR0 = path.join(SD, 'guard'), GDIR = path.join(SD, 'guard11');
+>   19: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard11');
+    20: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    21: fs.mkdirSync(OUT, { recursive: true });
+    22: if (!fs.existsSync(MAN)) die('manifest missing');
+  --
+    31: }
+    32: const V1 = loadEng('v1'), R = loadEng('risk1'), E3 = loadEng('v3')(V1, R);
+    33: function loadGuard(dir, file, ver) {
+>   34:   const mf = path.join(dir, 'manifest.json'), f = path.join(ROOT, 'tools', file);
+    35:   if (!fs.existsSync(mf) || !fs.existsSync(f)) die('guard not registered: ' + file);
+    36:   if (sha(fs.readFileSync(f)) !== readJson(mf).sha256) die('guard hash mismatch: ' + file);
+    37:   const g = require(f);
+  --
+   196: const lib = {};
+   197: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   198:   const s = readJson(path.join(FRZ, f));
+>  199:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   200:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   201: }
+   202: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   197: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   198:   const s = readJson(path.join(FRZ, f));
+   199:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+>  200:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   201: }
+   202: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+   203: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  --
+== tools/sz-lab.cjs
+    46: }
+    47: if (!ROOT || !OFILE || (MODE !== 'freeze' && MODE !== 'run')) die('usage: node sz-lab.cjs <root> <freeze|run|selftest> <opts.json>');
+    48: const O = readJson(OFILE);
+>   49: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    50: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), MAN = path.join(SD, 'manifest.json');
+    51: const OUT = path.join(ROOT, 'out', 'lab'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    52: [SD, ENG, FRZ, CAND, SURV, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+  --
+    47: if (!ROOT || !OFILE || (MODE !== 'freeze' && MODE !== 'run')) die('usage: node sz-lab.cjs <root> <freeze|run|selftest> <opts.json>');
+    48: const O = readJson(OFILE);
+    49: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+>   50: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), MAN = path.join(SD, 'manifest.json');
+    51: const OUT = path.join(ROOT, 'out', 'lab'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    52: [SD, ENG, FRZ, CAND, SURV, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+    53: const L = []; const say = s => L.push(s);
+  --
+   168:   const e = man.engines && man.engines[name];
+   169:   if (!e) throw new Error('engine not registered: ' + name);
+   170:   const f = path.join(ENG, e.file), buf = fs.readFileSync(f);
+>  171:   if (sha(buf) !== e.sha256) throw new Error('engine ' + name + ' hash mismatch (frozen file modified)');
+   172:   return require(f);
+   173: }
+   174: function resolveParams(base, ov, lib) {
+  --
+   182: 
+   183: // ================================================================ FREEZE
+   184: if (MODE === 'freeze') {
+>  185:   if (fs.existsSync(MAN)) die('already frozen: ' + MAN + ' (baseline is immutable)');
+   186:   const src = path.join(ROOT, 'tools', 'sz-engine.cjs');
+   187:   if (!fs.existsSync(src)) die('missing ' + src + ' (run 13_trade.ps1)');
+   188:   const buf = fs.readFileSync(src);
+  --
+   194:   const full = eng.prep(raw), params = {};
+   195:   Object.keys(full).forEach(k => { if (k[0] !== '_') params[k] = full[k]; });
+   196:   const now = new Date().toISOString();
+>  197:   const S000 = { id: 'S000', name: 'SafeZone v1 기준선', engine: 'v1', base: null, frozen: true, created: now, note: '13_trade + 13a_patch 기본값', params };
+   198:   const R000 = { id: 'R000', name: '기본규칙(시그널↓) 참고', engine: 'v1', base: null, frozen: true, created: now, note: '비교용',
+   199:     params: Object.assign({}, params, { SafeBelow: 'macd_sig', SafeAbove: 'macd_sig', UnsafeBelow: 'macd_sig', UnsafeAbove: 'macd_sig' }) };
+   200:   const ds = loadDataset(params.Match);
+  --
+   195:   Object.keys(full).forEach(k => { if (k[0] !== '_') params[k] = full[k]; });
+   196:   const now = new Date().toISOString();
+   197:   const S000 = { id: 'S000', name: 'SafeZone v1 기준선', engine: 'v1', base: null, frozen: true, created: now, note: '13_trade + 13a_patch 기본값', params };
+>  198:   const R000 = { id: 'R000', name: '기본규칙(시그널↓) 참고', engine: 'v1', base: null, frozen: true, created: now, note: '비교용',
+   199:     params: Object.assign({}, params, { SafeBelow: 'macd_sig', SafeAbove: 'macd_sig', UnsafeBelow: 'macd_sig', UnsafeAbove: 'macd_sig' }) };
+   200:   const ds = loadDataset(params.Match);
+   201:   if (!ds.items.length) die('no usable tick files');
+  --
+   203:   ds.items.forEach((it, k) => { ref[it.fp] = { n: r.per[k].n, sum: r.per[k].sum }; });
+   204:   for (const s of [S000, R000]) { const f = path.join(FRZ, s.id + '.json'); writeJson(f, s); try { fs.chmodSync(f, 0o444); } catch (e) { } }
+   205:   writeJson(MAN, { created: now, baseline: 'S000', engines: { v1: { file: 'v1.cjs', sha256: sha(buf), from: 'tools/sz-engine.cjs' } },
+>  206:     frozen: { S000: sha(JSON.stringify(S000.params)), R000: sha(JSON.stringify(R000.params)) }, ref: { dataset: ds.id, files: ref }, seeded: false });
+   207:   say('기준선 박제 완료: 엔진 v1 sha256 ' + sha(buf).slice(0, 16) + '…');
+   208:   ds.items.forEach((it, k) => say('  ' + it.code + ' ' + it.date + ': 거래 ' + r.per[k].n + ', 합계 ' + pct(r.per[k].sum) + '%'));
+   209:   say('  전체: 거래 ' + r.tot.n + ', 승 ' + r.tot.w + ', 합계 ' + pct(r.tot.sum) + '%  ← 13_trade 결과와 같아야 함');
+  --
+   213: }
+   214: 
+   215: // ================================================================ RUN
+>  216: if (!fs.existsSync(MAN)) die('not frozen yet: run 14_lab.ps1 -Freeze');
+   217: const man = readJson(MAN), lib = {};
+   218: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   219:   const s = readJson(path.join(FRZ, f));
+  --
+   217: const man = readJson(MAN), lib = {};
+   218: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   219:   const s = readJson(path.join(FRZ, f));
+>  220:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   221:   lib[s.id] = s;
+   222: }
+   223: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   258: const only = String(O.Only || '').split(',').map(s => s.trim()).filter(Boolean);
+   259: const want = id => !only.length || only.indexOf(id) >= 0;
+   260: const runs = [{ def: B, params: B.params, kind: 'baseline', res: base }];
+>  261: for (const id of Object.keys(lib)) if (id !== B.id && lib[id].frozen && want(id)) runs.push({ def: lib[id], params: lib[id].params, kind: 'reference' });
+   262: for (const id of Object.keys(surv).sort()) if (want(id)) runs.push({ def: surv[id], params: surv[id].params, kind: 'survivor' });
+   263: let errs = 0;
+   264: for (const f of fs.readdirSync(CAND).filter(x => x.endsWith('.json')).sort()) {
+  --
+   263: let errs = 0;
+   264: for (const f of fs.readdirSync(CAND).filter(x => x.endsWith('.json')).sort()) {
+   265:   let c; try { c = readJson(path.join(CAND, f)); } catch (e) { say('[오류] ' + f + ': JSON ' + e.message); errs++; continue; }
+>  266:   if (!c.id || surv[c.id] || (lib[c.id] && lib[c.id].frozen) || !want(c.id)) continue;
+   267:   try { runs.push({ def: c, params: resolveParams(c.base || B.id, c.overrides, lib), kind: 'candidate' }); }
+   268:   catch (e) { say('[오류] ' + c.id + ': ' + e.message); errs++; }
+   269: }
+  --
+== tools/sz-lab3.cjs
+     8: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+     9: if (!ROOT || !OFILE || ['register', 'selftest', 'run'].indexOf(MODE) < 0) die('usage: node sz-lab3.cjs <root> <register|selftest|run> <opts.json>');
+    10: const O = readJson(OFILE);
+>   11: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    12: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+    13: const SURV3 = path.join(SD, 'survivors3'), MAN = path.join(SD, 'manifest.json');
+    14: const OUT = path.join(ROOT, 'out', 'lab3'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+  --
+    10: const O = readJson(OFILE);
+    11: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    12: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+>   13: const SURV3 = path.join(SD, 'survivors3'), MAN = path.join(SD, 'manifest.json');
+    14: const OUT = path.join(ROOT, 'out', 'lab3'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    15: [SURV3, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+    16: if (!fs.existsSync(MAN)) die('manifest missing: run 14_lab.ps1 -Freeze first');
+  --
+    20:   if (!e) die('engine not registered: ' + name);
+    21:   const f = path.join(ENG, e.file);
+    22:   if (!fs.existsSync(f)) die('engine file missing: ' + f);
+>   23:   if (sha(fs.readFileSync(f)) !== e.sha256) die('engine ' + name + ' hash mismatch (frozen file modified)');
+    24:   return require(f);
+    25: }
+    26: const V1REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+  --
+   295: const lib = {};
+   296: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   297:   const s = readJson(path.join(FRZ, f));
+>  298:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   299:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   300: }
+   301: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   296: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   297:   const s = readJson(path.join(FRZ, f));
+   298:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+>  299:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   300: }
+   301: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+   302: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  --
+   311:   return { id: c.id, name: c.name, params: p, kind: 'candidate', engine: c.engine || 'v1' };
+   312: }
+   313: let sids = list(O.Strategies);
+>  314: if (!sids.length) sids = Object.keys(lib).filter(id => lib[id].kind === 'frozen' || lib[id].status !== 'lapsed').sort();
+   315: sids = [B.id].concat(sids.filter(x => x !== B.id));
+   316: const strats = sids.map(resolve);
+   317: for (const s of strats) if ((s.engine || 'v1') !== 'v1') die(s.id + ': engine ' + s.engine + ' not supported (v3 wraps v1 params)');
+  --
+== tools/sz-probe.cjs
+     3: const root = process.argv[2];
+     4: const outDir = path.join(root, 'out', 'probe'); fs.mkdirSync(outDir, { recursive: true });
+     5: const L = [], add = s => L.push(s);
+>    6: const targets = ['strategies/engines/v1.cjs', 'tools/sz-lab.cjs', 'tools/sz-engine.cjs', 'strategies/manifest.json'];
+     7: const p1 = /^\s*(async\s+)?function\s+\w+|^\s*(const|let|var)\s+\w+\s*=\s*(async\s*)?(function|\([^)]*\)\s*=>)|module\.exports|^\s*exports\./;
+     8: const p2 = /simulate|trades?\.push|\bwhy\b|StopPct|SafeNoLoss|ExitTime|EntryStart|TargetPct|fee|ctx\.|\bret\b|mfe/i;
+     9: for (const rel of targets) {
+  --
+== tools/ui/probe.cjs
+    48: }
+    49: 
+    50: function secManifest(rep) {
+>   51:   const main = path.join(ROOT, 'strategies', 'manifest.json');
+    52:   rep.check('strategies/manifest.json exists', fs.existsSync(main), main);
+    53:   const files = [];
+    54:   walk(path.join(ROOT, 'strategies'), 3, files, 5000);
+  --
+    49: 
+    50: function secManifest(rep) {
+    51:   const main = path.join(ROOT, 'strategies', 'manifest.json');
+>   52:   rep.check('strategies/manifest.json exists', fs.existsSync(main), main);
+    53:   const files = [];
+    54:   walk(path.join(ROOT, 'strategies'), 3, files, 5000);
+    55:   const mans = files.filter(function (p) { return /manifest\.json$/i.test(path.basename(p)) && !isBak(p); });
+  --
+== setup/14_lab.ps1
+    75: }
+    76: if (!ROOT || !OFILE || (MODE !== 'freeze' && MODE !== 'run')) die('usage: node sz-lab.cjs <root> <freeze|run|selftest> <opts.json>');
+    77: const O = readJson(OFILE);
+>   78: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    79: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), MAN = path.join(SD, 'manifest.json');
+    80: const OUT = path.join(ROOT, 'out', 'lab'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    81: [SD, ENG, FRZ, CAND, SURV, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+  --
+    76: if (!ROOT || !OFILE || (MODE !== 'freeze' && MODE !== 'run')) die('usage: node sz-lab.cjs <root> <freeze|run|selftest> <opts.json>');
+    77: const O = readJson(OFILE);
+    78: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+>   79: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), MAN = path.join(SD, 'manifest.json');
+    80: const OUT = path.join(ROOT, 'out', 'lab'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    81: [SD, ENG, FRZ, CAND, SURV, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+    82: const L = []; const say = s => L.push(s);
+  --
+   197:   const e = man.engines && man.engines[name];
+   198:   if (!e) throw new Error('engine not registered: ' + name);
+   199:   const f = path.join(ENG, e.file), buf = fs.readFileSync(f);
+>  200:   if (sha(buf) !== e.sha256) throw new Error('engine ' + name + ' hash mismatch (frozen file modified)');
+   201:   return require(f);
+   202: }
+   203: function resolveParams(base, ov, lib) {
+  --
+   211: 
+   212: // ================================================================ FREEZE
+   213: if (MODE === 'freeze') {
+>  214:   if (fs.existsSync(MAN)) die('already frozen: ' + MAN + ' (baseline is immutable)');
+   215:   const src = path.join(ROOT, 'tools', 'sz-engine.cjs');
+   216:   if (!fs.existsSync(src)) die('missing ' + src + ' (run 13_trade.ps1)');
+   217:   const buf = fs.readFileSync(src);
+  --
+   223:   const full = eng.prep(raw), params = {};
+   224:   Object.keys(full).forEach(k => { if (k[0] !== '_') params[k] = full[k]; });
+   225:   const now = new Date().toISOString();
+>  226:   const S000 = { id: 'S000', name: 'SafeZone v1 기준선', engine: 'v1', base: null, frozen: true, created: now, note: '13_trade + 13a_patch 기본값', params };
+   227:   const R000 = { id: 'R000', name: '기본규칙(시그널↓) 참고', engine: 'v1', base: null, frozen: true, created: now, note: '비교용',
+   228:     params: Object.assign({}, params, { SafeBelow: 'macd_sig', SafeAbove: 'macd_sig', UnsafeBelow: 'macd_sig', UnsafeAbove: 'macd_sig' }) };
+   229:   const ds = loadDataset(params.Match);
+  --
+   224:   Object.keys(full).forEach(k => { if (k[0] !== '_') params[k] = full[k]; });
+   225:   const now = new Date().toISOString();
+   226:   const S000 = { id: 'S000', name: 'SafeZone v1 기준선', engine: 'v1', base: null, frozen: true, created: now, note: '13_trade + 13a_patch 기본값', params };
+>  227:   const R000 = { id: 'R000', name: '기본규칙(시그널↓) 참고', engine: 'v1', base: null, frozen: true, created: now, note: '비교용',
+   228:     params: Object.assign({}, params, { SafeBelow: 'macd_sig', SafeAbove: 'macd_sig', UnsafeBelow: 'macd_sig', UnsafeAbove: 'macd_sig' }) };
+   229:   const ds = loadDataset(params.Match);
+   230:   if (!ds.items.length) die('no usable tick files');
+  --
+   232:   ds.items.forEach((it, k) => { ref[it.fp] = { n: r.per[k].n, sum: r.per[k].sum }; });
+   233:   for (const s of [S000, R000]) { const f = path.join(FRZ, s.id + '.json'); writeJson(f, s); try { fs.chmodSync(f, 0o444); } catch (e) { } }
+   234:   writeJson(MAN, { created: now, baseline: 'S000', engines: { v1: { file: 'v1.cjs', sha256: sha(buf), from: 'tools/sz-engine.cjs' } },
+>  235:     frozen: { S000: sha(JSON.stringify(S000.params)), R000: sha(JSON.stringify(R000.params)) }, ref: { dataset: ds.id, files: ref }, seeded: false });
+   236:   say('기준선 박제 완료: 엔진 v1 sha256 ' + sha(buf).slice(0, 16) + '…');
+   237:   ds.items.forEach((it, k) => say('  ' + it.code + ' ' + it.date + ': 거래 ' + r.per[k].n + ', 합계 ' + pct(r.per[k].sum) + '%'));
+   238:   say('  전체: 거래 ' + r.tot.n + ', 승 ' + r.tot.w + ', 합계 ' + pct(r.tot.sum) + '%  ← 13_trade 결과와 같아야 함');
+  --
+   242: }
+   243: 
+   244: // ================================================================ RUN
+>  245: if (!fs.existsSync(MAN)) die('not frozen yet: run 14_lab.ps1 -Freeze');
+   246: const man = readJson(MAN), lib = {};
+   247: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   248:   const s = readJson(path.join(FRZ, f));
+  --
+   246: const man = readJson(MAN), lib = {};
+   247: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   248:   const s = readJson(path.join(FRZ, f));
+>  249:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   250:   lib[s.id] = s;
+   251: }
+   252: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   287: const only = String(O.Only || '').split(',').map(s => s.trim()).filter(Boolean);
+   288: const want = id => !only.length || only.indexOf(id) >= 0;
+   289: const runs = [{ def: B, params: B.params, kind: 'baseline', res: base }];
+>  290: for (const id of Object.keys(lib)) if (id !== B.id && lib[id].frozen && want(id)) runs.push({ def: lib[id], params: lib[id].params, kind: 'reference' });
+   291: for (const id of Object.keys(surv).sort()) if (want(id)) runs.push({ def: surv[id], params: surv[id].params, kind: 'survivor' });
+   292: let errs = 0;
+   293: for (const f of fs.readdirSync(CAND).filter(x => x.endsWith('.json')).sort()) {
+  --
+   292: let errs = 0;
+   293: for (const f of fs.readdirSync(CAND).filter(x => x.endsWith('.json')).sort()) {
+   294:   let c; try { c = readJson(path.join(CAND, f)); } catch (e) { say('[오류] ' + f + ': JSON ' + e.message); errs++; continue; }
+>  295:   if (!c.id || surv[c.id] || (lib[c.id] && lib[c.id].frozen) || !want(c.id)) continue;
+   296:   try { runs.push({ def: c, params: resolveParams(c.base || B.id, c.overrides, lib), kind: 'candidate' }); }
+   297:   catch (e) { say('[오류] ' + c.id + ': ' + e.message); errs++; }
+   298: }
+  --
+== setup/15_candidates.ps1
+     4: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM'; exit 1 }
+     5: $ErrorActionPreference = 'Stop'
+     6: $dir = Join-Path $Root 'strategies\candidates'
+>    7: if (-not (Test-Path (Join-Path $Root 'strategies\manifest.json'))) { Write-Host '[실패] 기준선 미박제: 14_lab.ps1 -Freeze 먼저' -ForegroundColor Red; exit 1 }
+     8: if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+     9: $enc = New-Object System.Text.UTF8Encoding($false)
+    10: $now = (Get-Date).ToUniversalTime().ToString('o')
+  --
+== setup/20_risk.ps1
+   508: const root = process.argv[2];
+   509: const outDir = path.join(root, 'out', 'probe'); fs.mkdirSync(outDir, { recursive: true });
+   510: const L = [], add = s => L.push(s);
+>  511: const targets = ['strategies/engines/v1.cjs', 'tools/sz-lab.cjs', 'tools/sz-engine.cjs', 'strategies/manifest.json'];
+   512: const p1 = /^\s*(async\s+)?function\s+\w+|^\s*(const|let|var)\s+\w+\s*=\s*(async\s*)?(function|\([^)]*\)\s*=>)|module\.exports|^\s*exports\./;
+   513: const p2 = /simulate|trades?\.push|\bwhy\b|StopPct|SafeNoLoss|ExitTime|EntryStart|TargetPct|fee|ctx\.|\bret\b|mfe/i;
+   514: for (const rel of targets) {
+  --
+== setup/21_engine_v3.ps1
+    38: 
+    39: Write-Host '=== mom-trader 엔진 v3 (리스크 계층 + 포트폴리오) ==='
+    40: if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'node 없음'; exit 1 }
+>   41: if (-not (Test-Path (Join-Path $Root 'strategies\manifest.json'))) { Fail 'manifest 없음 - 14_lab.ps1 -Freeze 먼저'; exit 1 }
+    42: $rm = [IO.File]::ReadAllText((Join-Path $Root 'tools\sz-risk.cjs'), $enc)
+    43: if (-not $rm.Contains("'risk-1.1'")) { Fail 'sz-risk.cjs 가 risk-1.1 아님 - 20a/20b 먼저'; exit 1 }
+    44: NodeRun @((Join-Path $Root 'tools\sz-risk-selftest.cjs'), (Join-Path $Root 'strategies\risk')) '리스크 자가검증'
+  --
+   247: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+   248: if (!ROOT || !OFILE || ['register', 'selftest', 'run'].indexOf(MODE) < 0) die('usage: node sz-lab3.cjs <root> <register|selftest|run> <opts.json>');
+   249: const O = readJson(OFILE);
+>  250: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+   251: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+   252: const SURV3 = path.join(SD, 'survivors3'), MAN = path.join(SD, 'manifest.json');
+   253: const OUT = path.join(ROOT, 'out', 'lab3'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+  --
+   249: const O = readJson(OFILE);
+   250: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+   251: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+>  252: const SURV3 = path.join(SD, 'survivors3'), MAN = path.join(SD, 'manifest.json');
+   253: const OUT = path.join(ROOT, 'out', 'lab3'), tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+   254: [SURV3, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+   255: if (!fs.existsSync(MAN)) die('manifest missing: run 14_lab.ps1 -Freeze first');
+  --
+   259:   if (!e) die('engine not registered: ' + name);
+   260:   const f = path.join(ENG, e.file);
+   261:   if (!fs.existsSync(f)) die('engine file missing: ' + f);
+>  262:   if (sha(fs.readFileSync(f)) !== e.sha256) die('engine ' + name + ' hash mismatch (frozen file modified)');
+   263:   return require(f);
+   264: }
+   265: const V1REJ = ['time', 'count', 'gap', 'lim', 'ema', 'disp', 'tick'];
+  --
+   534: const lib = {};
+   535: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   536:   const s = readJson(path.join(FRZ, f));
+>  537:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   538:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   539: }
+   540: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   535: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   536:   const s = readJson(path.join(FRZ, f));
+   537:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+>  538:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   539: }
+   540: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+   541: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  --
+   550:   return { id: c.id, name: c.name, params: p, kind: 'candidate', engine: c.engine || 'v1' };
+   551: }
+   552: let sids = list(O.Strategies);
+>  553: if (!sids.length) sids = Object.keys(lib).filter(id => lib[id].kind === 'frozen' || lib[id].status !== 'lapsed').sort();
+   554: sids = [B.id].concat(sids.filter(x => x !== B.id));
+   555: const strats = sids.map(resolve);
+   556: for (const s of strats) if ((s.engine || 'v1') !== 'v1') die(s.id + ': engine ' + s.engine + ' not supported (v3 wraps v1 params)');
+  --
+== setup/22_guard.ps1
+   350: & node (Join-Path $Root 'tools\sz-guard-selftest.cjs') (Join-Path $Root 'strategies\guard') 2>&1 | ForEach-Object { "  $_" }
+   351: if ($LASTEXITCODE -ne 0) { Fail 'guard selftest failed - paste the FAIL lines'; exit 1 }
+   352: $h = (Get-FileHash (Join-Path $Root 'tools\sz-guard.cjs') -Algorithm SHA256).Hash.ToLower()
+>  353: Put 'strategies\guard\manifest.json' ("{`n  ""version"": ""guard-1.0"",`n  ""sha256"": ""$h""`n}`n")
+   354: Ok "guard-1.0 registered sha256=$($h.Substring(0,12))"
+   355: Ok 'done (engines and lab files untouched)'
+   356: 
+  --
+== setup/22b_guard_lab.ps1
+    23: const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+    24: const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+    25: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+>   26: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    27: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk'), GDIR = path.join(SD, 'guard');
+    28: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard');
+    29: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+  --
+    25: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+    26: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+    27: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk'), GDIR = path.join(SD, 'guard');
+>   28: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard');
+    29: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+    30: fs.mkdirSync(OUT, { recursive: true });
+    31: if (!fs.existsSync(MAN)) die('manifest missing');
+  --
+    39:   return require(f);
+    40: }
+    41: const V1 = loadEng('v1'), R = loadEng('risk1'), E3 = loadEng('v3')(V1, R);
+>   42: const GMF = path.join(GDIR, 'manifest.json'), GF = path.join(ROOT, 'tools', 'sz-guard.cjs');
+    43: if (!fs.existsSync(GMF) || !fs.existsSync(GF)) die('guard not registered: run 22_guard.ps1');
+    44: if (sha(fs.readFileSync(GF)) !== readJson(GMF).sha256) die('guard hash mismatch (sz-guard.cjs modified)');
+    45: const G = require(GF);
+  --
+   136: const lib = {};
+   137: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   138:   const s = readJson(path.join(FRZ, f));
+>  139:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   140:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   141: }
+   142: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   137: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   138:   const s = readJson(path.join(FRZ, f));
+   139:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+>  140:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   141: }
+   142: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+   143: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  --
+== setup/22c_guard11.ps1
+    35: if (-not (Test-Path $Root)) { Fail "root not found: $Root"; exit 1 }
+    36: if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'node not found'; exit 1 }
+    37: 
+>   38: $g0 = Join-Path $Root 'tools\sz-guard.cjs'; $m0 = Join-Path $Root 'strategies\guard\manifest.json'
+    39: if (-not (Test-Path $g0) -or -not (Test-Path $m0)) { Fail 'guard-1.0 not registered: run 22_guard.ps1'; exit 1 }
+    40: $h0 = (Get-FileHash $g0 -Algorithm SHA256).Hash.ToLower()
+    41: $r0 = (Get-Content $m0 -Raw -Encoding UTF8 | ConvertFrom-Json).sha256
+  --
+   254: const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+   255: const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+   256: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+>  257: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+   258: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+   259: const GDIR0 = path.join(SD, 'guard'), GDIR = path.join(SD, 'guard11');
+   260: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard11');
+  --
+   257: const SD = path.join(ROOT, 'strategies'), ENG = path.join(SD, 'engines'), FRZ = path.join(SD, 'frozen');
+   258: const CAND = path.join(SD, 'candidates'), SURV = path.join(SD, 'survivors'), RISK = path.join(SD, 'risk');
+   259: const GDIR0 = path.join(SD, 'guard'), GDIR = path.join(SD, 'guard11');
+>  260: const MAN = path.join(SD, 'manifest.json'), OUT = path.join(ROOT, 'out', 'guard11');
+   261: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily');
+   262: fs.mkdirSync(OUT, { recursive: true });
+   263: if (!fs.existsSync(MAN)) die('manifest missing');
+  --
+   272: }
+   273: const V1 = loadEng('v1'), R = loadEng('risk1'), E3 = loadEng('v3')(V1, R);
+   274: function loadGuard(dir, file, ver) {
+>  275:   const mf = path.join(dir, 'manifest.json'), f = path.join(ROOT, 'tools', file);
+   276:   if (!fs.existsSync(mf) || !fs.existsSync(f)) die('guard not registered: ' + file);
+   277:   if (sha(fs.readFileSync(f)) !== readJson(mf).sha256) die('guard hash mismatch: ' + file);
+   278:   const g = require(f);
+  --
+   437: const lib = {};
+   438: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   439:   const s = readJson(path.join(FRZ, f));
+>  440:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   441:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   442: }
+   443: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+  --
+   438: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   439:   const s = readJson(path.join(FRZ, f));
+   440:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+>  441:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   442: }
+   443: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+   444: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+  --
+   652: 
+   653: $gt = $guardJs -replace "`r`n", "`n"
+   654: $gh = Sha ($enc.GetBytes($gt))
+>  655: $m1 = Join-Path $Root 'strategies\guard11\manifest.json'
+   656: $writeMan = $true
+   657: if (Test-Path $m1) {
+   658:   $old = (Get-Content $m1 -Raw -Encoding UTF8 | ConvertFrom-Json).sha256
+  --
+== setup/29_probe.ps1
+   316: }
+   317: 
+   318: function secManifest(rep) {
+>  319:   const main = path.join(ROOT, 'strategies', 'manifest.json');
+   320:   rep.check('strategies/manifest.json exists', fs.existsSync(main), main);
+   321:   const files = [];
+   322:   walk(path.join(ROOT, 'strategies'), 3, files, 5000);
+  --
+   317: 
+   318: function secManifest(rep) {
+   319:   const main = path.join(ROOT, 'strategies', 'manifest.json');
+>  320:   rep.check('strategies/manifest.json exists', fs.existsSync(main), main);
+   321:   const files = [];
+   322:   walk(path.join(ROOT, 'strategies'), 3, files, 5000);
+   323:   const mans = files.filter(function (p) { return /manifest\.json$/i.test(path.basename(p)) && !isBak(p); });
+  --

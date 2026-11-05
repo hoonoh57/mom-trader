@@ -1,0 +1,54 @@
+{
+ "step": "S0.probe",
+ "version": "probe-1.0",
+ "started": "2026-11-04T11:39:33.538Z",
+ "env": {
+  "node": "v24.19.0",
+  "ps": "5.1.26100.9818",
+  "os": "win32-x64",
+  "report": "report-1.0",
+  "envFile": "found",
+  "secretsMasked": "7"
+ },
+ "checks": [
+  {
+   "name": "selftest: mask secrets/bearer/account, keep prices",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: env loader picks only secret-like keys",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: utf8 hangul roundtrip without BOM",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: size cap and FAIL report with code context",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: PASS report is compact",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "data": [
+  {
+   "title": "show data/screen/five_percent.csv:1-4 (total 12098 lines, sha12 f1bf4b200760)",
+   "body": "    1: ﻿조건식,포착 시각,일자,code,name,포착가,포착분 거래대금(백만원),상태,1_mfe,1_ret,3_mfe,3_ret,50_mfe,50_ret,60_mfe,60_ret\n    2: 5%_일중,09:05,20260506,A001500,현대차증권,\"12,640\",\"1,254.1\",정상,+0.47%,-0.87% @ 09:06,+0.47%,-1.11% @ 09:08,+3.24%,+1.66% @ 09:55,+3.24%,+0.87% @ 10:05\n    3: 5%_일중,09:05,20260506,A003470,유안타증권,\"6,380\",\"1,358.4\",정상,+1.57%,-3.45% @ 09:06,+1.57%,-3.76% @ 09:08,+7.37%,+5.33% @ 09:55,+10.34%,+5.64% @ 10:05\n    4: 5%_일중,09:05,20260506,A003720,삼영,\"13,690\",\"1,619.4\",정상,+0.00%,-1.39% @ 09:06,+0.00%,-4.89% @ 09:08,+0.00%,-4.31% @ 09:55,+0.00%,-6.50% @ 10:05"
+  },
+  {
+   "title": "show strategies/engines/v1.cjs:60-140 (total 198 lines, sha12 921bdbc3319c)",
+   "body": "   60:   }\n   61:   function compute(bars, P) {\n   62:     const N = bars.length, c = bars.map(b => b.c);\n   63:     const mom = new Array(N).fill(null);\n   64:     for (let i = P.MomLen; i < N; i++) { const r = c[i - P.MomLen]; mom[i] = r > 0 ? c[i] / r * 100 : null; }\n   65:     const e1 = ema(c, P.P1), e2 = ema(c, P.P2);\n   66:     const n = c.map((x, i) => (e1[i] - e2[i]) / x * 100);\n   67:     const sig = ema(n, P.P3);\n   68:     const emaL = ema(c, P.EmaLen);\n   69:     const st = supertrend(bars, P.StLen, P.StMult);\n   70:     const amt = bars.map(b => (b.o + b.h + b.l + b.c) / 4 * b.v);\n   71:     const taamt = new Array(N), dayStart = new Array(N);\n   72:     let d = null, cum = 0, ds = 0;\n   73:     for (let i = 0; i < N; i++) {\n   74:       if (bars[i].d !== d) { d = bars[i].d; cum = 0; ds = i; }\n   75:       cum += amt[i]; taamt[i] = cum; dayStart[i] = ds;\n   76:     }\n   77:     const big = new Array(N).fill(false); let win = 0;\n   78:     for (let i = 0; i < N; i++) {\n   79:       let rel = false;\n   80:       if (i >= P.RelWin) rel = amt[i] >= P.RelK * (win / P.RelWin);\n   81:       const abs = amt[i] >= P.BigTh;\n   82:       big[i] = P.BigMode === 'abs' ? abs : P.BigMode === 'rel' ? rel : (abs && rel);\n   83:       win += amt[i]; if (i >= P.RelWin) win -= amt[i - P.RelWin];\n   84:     }\n   85:     const cnt1 = new Array(N), thr = new Array(N), tickOk = new Array(N);\n   86:     let a1 = 0, a5 = 0;\n   87:     for (let i = 0; i < N; i++) {\n   88:       const t = bars[i].t;\n   89:       while (bars[a1].t <= t - 60) a1++;\n   90:       while (bars[a5].t <= t - 300) a5++;\n   91:       cnt1[i] = (i - a1 + 1) * P.TickScope;\n   92:       const avg5 = (i - a5 + 1) * P.TickScope / 5;\n   93:       thr[i] = Math.max(P.TickAbs, avg5 * P.TickK);\n   94:       tickOk[i] = cnt1[i] >= thr[i];\n   95:     }\n   96:     const disp = c.map((x, i) => emaL[i] > 0 ? x / emaL[i] * 100 : null);\n   97:     const safe = new Array(N).fill(false);\n   98:     let s = false, upRun = 0, dnRun = 0;\n   99:     for (let i = 0; i < N; i++) {\n  100:       const m = mom[i];\n  101:       if (m == null) { safe[i] = false; continue; }\n  102:       upRun = m >= P.SafeTh ? upRun + 1 : 0;\n  103:       dnRun = m < P.SafeExitTh ? dnRun + 1 : 0;\n  104:       if (!s && upRun >= P.SafeConfirm) s = true; else if (s && dnRun >= P.SafeConfirm) s = false;\n  105:       safe[i] = s;\n  106:     }\n  107:     return { mom, n, sig, ema: emaL, st: st.line, stDir: st.dir, amt, taamt, dayStart, big, cnt1, thr, tickOk, disp, safe };\n  108:   }\n  109:   function hit(rule, i, ind, b, pos, P) {\n  110:     switch (rule) {\n  111:       case 'hold': return false;\n  112:       case 'immediate': return true;\n  113:       case 'macd_zero': return ind.n[i] < 0;\n  114:       case 'macd_sig': return ind.n[i] < ind.sig[i];\n  115:       case 'supertrend': return ind.stDir[i] === -1;\n  116:       case 'trail': return b.c <= pos.peakC * (1 - P.TrailPct / 100);\n  117:       default: throw new Error('unknown rule ' + rule);\n  118:     }\n  119:   }\n  120:   function simulate(bars, ind, P, ctx) {\n  121:     const N = bars.length, trades = [], marks = [];\n  122:     const rej = { time: 0, count: 0, gap: 0, lim: 0, ema: 0, disp: 0, tick: 0 };\n  123:     const armMode = P.ArmMode === 'cross' ? 'cross' : 'state';\n  124:     const noLoss = Number(P.SafeNoLoss == null ? 1 : P.SafeNoLoss) > 0;\n  125:     const minPct = Number(P.SafeMinPct || 0), gap = Number(P.ReentryGap || 0);\n  126:     let armed = false, pos = null, hiDay = 0, pbDone = false, arms = 0, sigs = 0, lastI = -1, lastExit = -1e9, held = 0;\n  127:     const limMode = ctx.limKind === 'limit' ? P.LimMode : ctx.limKind === 'surge' ? P.SurgeMode : 'off';\n  128:     const closeTrade = (i, px, why) => {\n  129:       const gross = (px / pos.entry - 1) * 100, ret = gross - P.FeePct;\n  130:       trades.push({ inI: pos.idx, inPx: pos.entry, outI: i, outPx: px, why, gross, ret,\n  131:         mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held });\n  132:       marks.push({ i, k: 'exit', why, ret });\n  133:       pos = null; lastExit = i;\n  134:     };\n  135:     for (let i = ctx.start; i < N; i++) {\n  136:       const b = bars[i];\n  137:       if (b.d !== ctx.date) continue;\n  138:       lastI = i;\n  139:       if (b.h > hiDay) hiDay = b.h;\n  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;"
+  }
+ ],
+ "errors": [],
+ "notes": [],
+ "verdict": "PASS",
+ "ended": "2026-11-04T11:39:33.565Z"
+}

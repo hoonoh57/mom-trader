@@ -1,0 +1,160 @@
+#MT-REPORT v=report-1.0 step=S4.period ver=period-1.0 verdict=PASS ts=2026-11-04T11:29:23.092Z dur=2.4s
+#DIR E:\parent\projects\rea\projects\mom-trader\out\reports\S4.period_20261104-202920
+#ENV node=v24.19.0 os=win32-x64 engines=engines-1.0
+#CHK 11/11 PASS
+#SUM archive files=1068 loaded=1058 excluded=10 noDaily=0 eligible(>=400)=476 full(>=800)=315 range=20261007~20261103 dates=19
+#SUM capture csv=E:\parent\projects\rea\projects\mom-trader\data\screen\five_percent.csv rows=12096 bad=1003 stockDays=11093
+#SUM strategies=S000,C013 excl=20261021 timeExitAdj trades(S000)=101
+#DATA summary (MDD = sequential by date/code, approx) lines=11
+label                        n     w   win%      sum   sumAdj     avg    PF     MDD avgMfe
+S000 all W>=400           1341   382   28.5  -295.86  -257.52  -0.221  0.77  332.56   2.12
+S000 excl 20261021        1118   332   29.7  -169.63  -142.08  -0.152  0.84  206.33   2.19
+S000 full W>=800          1074   317   29.5  -138.19  -101.59  -0.129  0.86  184.97   2.14
+S000 firstOnly             390   150   38.5   +87.90   +96.53   0.225  1.19  103.61   3.45
+S000 untilFirstWin         705   234   33.2    -6.92    +8.80  -0.010  0.99  184.00   2.78
+C013 all W>=400           1201   339   28.2  -318.87  -276.12  -0.266  0.75  360.31   2.28
+C013 excl 20261021         993   291   29.3  -188.56  -160.86  -0.190  0.82  230.00   2.39
+C013 full W>=800           959   276   28.8  -172.54  -138.43  -0.180  0.82  244.49   2.32
+C013 firstOnly             383   137   35.8   +58.10   +77.49   0.152  1.12  134.38   3.57
+C013 untilFirstWin         703   222   31.6   -59.37   -35.68  -0.084  0.93  221.31   2.85
+#END
+#DATA by_date lines=20
+date     items   S000 n      sum   sumAdj   C013 n      sum   sumAdj
+20261007     3       20   +11.84    +8.08       19    +7.22    +7.22
+20261008     6       19    +2.79    +2.79       25    +1.67    +1.10
+20261012    17       59   -53.15   -53.47       43   -33.89   -34.47
+20261013     5       27    -6.74    -7.07       24    +1.37    +1.37
+20261014    11       50   -19.97   -19.69       49   -24.83   -22.61
+20261015     4       18    -9.75    -9.75       17   -10.88   -10.88
+20261016    22       63    +4.89    +4.21       59   -13.48   -14.29
+20261019    11       47    +6.46    +9.78       43    -1.58    +1.95
+20261020    19       86   -51.50   -51.90       76   -37.62   -36.35
+20261021   138      223  -126.23  -115.43      208  -130.31  -115.26
+20261022    25       64   -33.56   -33.15       54   -25.31   -26.42
+20261023     9       46   -13.29   -13.29       38   -27.02   -27.02
+20261026    22       75    -5.20    -0.26       67   -16.14   -15.78
+20261027    33       84   -12.85    -7.97       72    -4.25    +5.85
+20261028    77      207   +95.97  +115.80      159  +132.28  +155.45
+20261029    23       88   -29.70   -23.87       81   -52.99   -47.10
+20261030    15       62   -29.61   -31.33       65   -51.40   -60.16
+20261102    20       53    -3.82    -0.74       50    -1.89    +1.61
+20261103    16       50   -22.43   -30.24       52   -29.83   -40.36
+#END
+#DATA by_why lines=11
+strategy why                 n      sum     avg
+S000     U-:macd_sig         985  -636.04  -0.646
+S000     U+:immediate        130  +634.72   4.882
+S000     stop                122  -396.65  -3.251
+S000     time                101   +92.65   0.917
+S000     eod                   3    +9.46   3.155
+C013     U-:macd_sig         788  -581.55  -0.738
+C013     stop                149  -484.40  -3.251
+C013     time                131  +140.35   1.071
+C013     U+:immediate        128  +594.95   4.648
+C013     eod                   5   +11.78   2.356
+#END
+#DATA loss_decomposition lines=9
+strategy class        n      sum  avgMfe  avgMae   (chase: loss & mfe<0.5, giveback: loss & mfe>=1)
+S000     win         382 +1000.32    4.94   -0.74
+S000     chase       426  -580.37    0.20   -1.36
+S000     mid         202  -256.75    0.76   -1.43
+S000     giveback    331  -459.06    2.15   -1.69
+C013     win         339  +951.62    5.31   -0.81
+C013     chase       381  -530.50    0.20   -1.42
+C013     mid         177  -233.36    0.74   -1.42
+C013     giveback    304  -506.64    2.43   -1.92
+#END
+#DATA target_reach lines=13
+strategy   T  trades%mfe>=T  first%mfe>=T  losers%mfe>=T   (engine mfe definition, see probe_v1_mfe)
+S000      0.5           68.2          81.8           55.6
+S000        1           52.4          73.3           34.5
+S000      1.5           42.9          65.1           23.3
+S000        2           33.2          54.4           14.1
+S000        3           23.0          41.3            5.8
+S000        5           11.6          23.3            1.1
+C013      0.5           67.9          80.9           55.8
+C013        1           52.0          71.0           35.3
+C013      1.5           43.2          62.9           25.5
+C013        2           34.9          53.3           16.6
+C013        3           24.9          41.5            7.9
+C013        5           13.6          26.4            2.4
+#END
+#DATA capture lines=4
+strategy days  realized  sumMfe60csv  cap60%  sumMfeDayTick  capDay%
+S000         0      0.00         0.00       -           0.00        -
+C013         0      0.00         0.00       -           0.00        -
+csv vs tick mfe60 |diff|>1%p: 0 stock-days
+#END
+#DATA by_code (top/bottom 8) lines=33
+strategy rank code      days   n      sum
+S000     top1  263860       4  16   +25.25
+S000     top2  443670       4  15   +15.51
+S000     top3  195870       1   3   +14.15
+S000     top4  079650       1   6   +12.52
+S000     top5  087010       2   6   +12.43
+S000     top6  458870       2   4   +12.28
+S000     top7  030530       3  22   +12.16
+S000     top8  456010       1   1   +10.44
+S000     bot8  005160       3   9   -12.98
+S000     bot7  003780       2   7   -13.33
+S000     bot6  046890       2  11   -14.04
+S000     bot5  252990       3  16   -14.68
+S000     bot4  393210       3  12   -17.03
+S000     bot3  014950       2  16   -17.62
+S000     bot2  030960       5  21   -18.22
+S000     bot1  0011A0       3  20   -21.76
+C013     top1  263860       4  18   +18.85
+C013     top2  030530       3  18   +17.53
+C013     top3  195870       1   1   +12.54
+C013     top4  003160       3   8   +11.01
+C013     top5  456010       1   1   +10.44
+C013     top6  458870       2   4    +9.61
+C013     top7  087010       2   8    +9.49
+C013     top8  253590       3  15    +9.26
+C013     bot8  138360       4  21   -11.11
+C013     bot7  046890       2  10   -11.78
+C013     bot6  468530       4  12   -11.81
+C013     bot5  005160       3   7   -12.53
+C013     bot4  010580       2  14   -12.67
+C013     bot3  003780       2   8   -15.14
+C013     bot2  084670       4  14   -25.22
+C013     bot1  0011A0       3  20   -33.14
+#END
+#DATA probe_v1_mfe lines=4
+strategies/engines/v1.cjs:131: mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held });
+strategies/engines/v1.cjs:193: const n = tr.length; let w = 0, sum = 0, best = -Infinity, worst = Infinity, mfe = 0;
+strategies/engines/v1.cjs:194: for (const t of tr) { if (t.ret > 0) w++; sum += t.ret; best = Math.max(best, t.ret); worst = Math.min(worst, t.ret); mfe += t.mfe; }
+strategies/engines/v1.cjs:195: return { n, w, sum, avg: n ? sum / n : 0, best: n ? best : 0, worst: n ? worst : 0, avgMfe: n ? mfe / n : 0 };
+#END
+#DATA probe_guard11_wiring lines=18
+tools/sz-lab-guard11.cjs:5: //   causality by truncation (new profiles), v1 vs E3+GP000 trades, lab3-indep vs simulate.
+tools/sz-lab-guard11.cjs:8: const fs = require('fs'), path = require('path'), crypto = require('crypto');
+tools/sz-lab-guard11.cjs:12: if (!ROOT) die('usage: node sz-lab-guard11.cjs <root> [--strategies S000,C013] [--risk RP000,RP001] [--guards GP000,GP020]');
+tools/sz-lab-guard11.cjs:30: return require(f);
+tools/sz-lab-guard11.cjs:37: const g = require(f);
+tools/sz-lab-guard11.cjs:238: if (gwant.length && gwant.indexOf(id) < 0 && id !== 'GP000') continue;
+tools/sz-lab-guard11.cjs:241: if (!guards.length || guards[0].id !== 'GP000' || !G.isPassive(guards[0].P)) die('GP000 missing or not passive');
+tools/sz-lab-guard11.cjs:312: const hook = (gid, k) => ({ canEnter: G.makeHook(gates[gid][k]) });
+tools/sz-lab-guard11.cjs:313: const base = items.map((x, k) => E3.simulate(x.bars, x.ind, x.P, x.ctx, rp.P, hook('GP000', k)));
+tools/sz-lab-guard11.cjs:315: if (rp.id === 'RP000') { const m = same(V1.simulate(x.bars, x.ind, x.P, x.ctx), base[k]); if (m) die('PARITY v1 vs guard GP000 ' + s.id + ' ' + items0[k].f + ': ' + m); }
+tools/sz-lab-guard11.cjs:316: const m2 = same(E3.runPortfolio([x], rp.P)[0], base[k]); if (m2) die('PARITY lab3-indep vs simulate ' + s.id + '/' + rp.id + ' ' + items0[k].f + ': ' + m2);
+tools/sz-lab-guard11.cjs:323: const res = g.id === 'GP000' ? base : items.map((x, k) => E3.simulate(x.bars, x.ind, x.P, x.ctx, rp.P, hook(g.id, k)));
+tools/sz-lab-guard11.cjs:346: if (g.id === 'GP000') artL.push(p.code + ' ' + hmsS(b0[t.inI].hms) + ' ' + t.inPx + ' -> ' + hmsS(b0[t.outI].hms) + ' ' + t.outPx + ' ' + t.why + ' ret ' + fx(t.ret) +
+tools/sz-lab-guard11.cjs:357: if (g.id !== 'GP000') {
+tools/sz-lab-guard11.cjs:400: 'delta = sum(guard) - sum(GP000) under same strategy x risk. removed = GP000 trades the guard blocked, added = new entries after block.',
+tools/sz-guard11.cjs:10: const VERSION = 'guard-1.1';
+tools/sz-guard11.cjs:178: function makeHook(g) { return (i) => (g.ok[i] ? OK : { ok: false, why: g.why[i] }); }
+tools/sz-guard11.cjs:193: module.exports = { VERSION, PIDS, SIGS, ACTIONS, DEF, load, merge, validate, unknownKeys, enabledList, isPassive, sec, computeGate, makeHook, forward };
+#END
+#DATA excluded (max 20) lines=10
+014160_AL_120t_20261012.csv: too few bars: 6
+066670_AL_120t_20261013.csv: too few bars: 6
+091120_AL_120t_20261006.csv: too few bars: 4
+104200_AL_120t_20261006.csv: too few bars: 8
+123840_AL_120t_20261007.csv: too few bars: 4
+155650_AL_120t_20261006.csv: too few bars: 5
+290560_AL_120t_20261006.csv: too few bars: 6
+372910_AL_120t_20261006.csv: too few bars: 9
+373200_AL_120t_20261006.csv: too few bars: 7
+446840_AL_120t_20261006.csv: too few bars: 7
+#END

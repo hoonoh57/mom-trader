@@ -1,0 +1,62 @@
+== strategies/engines/v1.cjs
+     7:   const DEFAULTS = { MomLen: 50, SafeTh: 100, SafeExitTh: 100, SafeConfirm: 1, P1: 7, P2: 14, P3: 5,
+     8:     StrongA: 1e9, BigMode: 'abs', BigTh: 5e7, RelWin: 20, RelK: 3, BigNeedUp: 1, BigNeedST: 1,
+     9:     ArmSkip: 1, ArmSameSession: 1, EmaLen: 200, StLen: 14, StMult: 1.5, TickScope: 120, TickK: 1.0, TickAbs: 0,
+    10:     DispMax: 112, DispUntil: 1000, LimPct: 29, SurgePct: 25, LimMode: 'pullback', SurgeMode: 'pullback', PbPct: 5,
+>   11:     EntryStart: 900, EntryEnd: 1520, ExitTime: 1520, SessionStartMax: 905,
+    12:     TargetPct: 5, StopPct: 3, TrailPct: 2,
+    13:     SafeBelow: 'hold', SafeAbove: 'hold', UnsafeBelow: 'macd_sig', UnsafeAbove: 'immediate',
+    14:     FeePct: 0.25, SlipPct: 0, MaxTrades: 10, ArmMode: 'state', SafeNoLoss: 1, SafeMinPct: 0, ReentryGap: 0, Match: '_AL_120t_', Date: '' };
+    15: 
+  --
+    21:     if (['abs', 'rel', 'both'].indexOf(P.BigMode) < 0) throw new Error('BigMode invalid: ' + P.BigMode);
+    22:     for (const k of ['MomLen', 'P1', 'P2', 'P3', 'EmaLen', 'StLen', 'RelWin', 'TickScope', 'SafeConfirm'])
+    23:       if (!(Number(P[k]) >= 1)) throw new Error(k + ' must be >= 1');
+    24:   }
+>   25:   function prep(P0) {
+    26:     const P = Object.assign({}, DEFAULTS, P0 || {});
+    27:     validate(P);
+    28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;
+    29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;
+  --
+    24:   }
+    25:   function prep(P0) {
+    26:     const P = Object.assign({}, DEFAULTS, P0 || {});
+    27:     validate(P);
+>   28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;
+    29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;
+    30:     return P;
+    31:   }
+    32:   function ema(src, len) {
+  --
+    25:   function prep(P0) {
+    26:     const P = Object.assign({}, DEFAULTS, P0 || {});
+    27:     validate(P);
+    28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;
+>   29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;
+    30:     return P;
+    31:   }
+    32:   function ema(src, len) {
+    33:     const a = 2 / (len + 1), out = new Array(src.length); let prev = null;
+  --
+   173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+   174:       if (!signal) continue;
+   175:       sigs++;
+   176:       let why = null;
+>  177:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';
+   178:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';
+   179:       else if (i - lastExit <= gap) why = 'gap';
+   180:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';
+   181:       else if (!(b.c > ind.ema[i])) why = 'ema';
+  --
+== strategies/engines/v3.cjs
+   100:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+   101:       if (!signal) return;
+   102:       sigs++;
+   103:       let why = null;
+>  104:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';
+   105:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';
+   106:       else if (i - lastExit <= gap) why = 'gap';
+   107:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';
+   108:       else if (!(b.c > ind.ema[i])) why = 'ema';
+  --

@@ -1,0 +1,925 @@
+== tools/chart_build.mjs
+    29: <canvas id="c"></canvas><div id="tip"></div>
+    30: <script>
+    31: var D=__DATA__;
+>   32: var B=D.bars,N=B.length,cv=document.getElementById('c'),g=cv.getContext('2d'),tip=document.getElementById('tip');
+    33: var T=0,DT=1,O=2,HI=3,LO=4,C=5,REF=6,MOM=7,NN=8,SG=9,AMT=10,TAA=11,FL=12,MA=13,ST=14,SD=15,R1=16,R5=17,DO=18,DSP=19;
+    34: var AX=78,XH=18,W=0,H=0,start=0,count=N,mx=-1,my=-1,drag=null,UP='#e34a4a',DN='#3f7fd6';
+    35: document.getElementById('ttl').textContent=D.title;document.getElementById('info').textContent=D.info;
+  --
+   147:   return { st, dir };
+   148: }
+   149: 
+>  150: function load(file) {
+   151:   const lines = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+   152:   const head = lines[0].split(',');
+   153:   const I = {};
+  --
+   230:   return { rows, S, entries, warm: firstTarget, pbTime };
+   231: }
+   232: 
+>  233: const files = fs.readdirSync(A.tickDir).filter(f => f.endsWith('.csv') && (!A.match || f.includes(A.match)));
+   234: if (!files.length) { console.log('[FAIL] no csv in ' + A.tickDir + ' matching "' + A.match + '"'); process.exit(1); }
+   235: let failed = 0; const links = [];
+   236: const hms = t => t.slice(0, 2) + ':' + t.slice(2, 4) + ':' + t.slice(4, 6);
+  --
+== tools/replay_ref.mjs
+    13:   return values.map(v => (e = e === null ? v : e + a * (v - e)));
+    14: }
+    15: 
+>   16: function load(file) {
+    17:   const lines = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    18:   const head = lines[0].split(',');
+    19:   const col = k => { const i = head.indexOf(k); if (i < 0) throw new Error(`missing column: ${k}`); return i; };
+  --
+    26: }
+    27: 
+    28: let failed = 0;
+>   29: for (const f of fs.readdirSync(tickDir).filter(x => x.endsWith('.csv'))) {
+    30:   try {
+    31:     const bars = load(path.join(tickDir, f));
+    32:     const e1 = ema(bars.map(b => b.c), p1), e2 = ema(bars.map(b => b.c), p2);
+  --
+== tools/sz-engine.cjs
+   118:     }
+   119:   }
+   120:   function simulate(bars, ind, P, ctx) {
+>  121:     const N = bars.length, trades = [], marks = [];
+   122:     const rej = { time: 0, count: 0, gap: 0, lim: 0, ema: 0, disp: 0, tick: 0 };
+   123:     const armMode = P.ArmMode === 'cross' ? 'cross' : 'state';
+   124:     const noLoss = Number(P.SafeNoLoss == null ? 1 : P.SafeNoLoss) > 0;
+  --
+   129:       const gross = (px / pos.entry - 1) * 100, ret = gross - P.FeePct;
+   130:       trades.push({ inI: pos.idx, inPx: pos.entry, outI: i, outPx: px, why, gross, ret,
+   131:         mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held });
+>  132:       marks.push({ i, k: 'exit', why, ret });
+   133:       pos = null; lastExit = i;
+   134:     };
+   135:     for (let i = ctx.start; i < N; i++) {
+  --
+   161:       const baseOk = safe && ctx.dayComplete && ind.taamt[i] > P.StrongA && (i - ind.dayStart[i]) >= P.ArmSkip;
+   162:       if (armMode === 'state') {
+   163:         const want = !pos && baseOk && ind.n[i] > 0;
+>  164:         if (want && !armed) { arms++; marks.push({ i, k: 'arm' }); }
+   165:         armed = want;
+   166:       } else {
+   167:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+  --
+   167:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+   168:         const prevSame = i > 0 && (!P.ArmSameSession || bars[i - 1].d === b.d);
+   169:         const crossUp = prevSame && ind.n[i - 1] <= 0 && ind.n[i] > 0;
+>  170:         if (!pos && !armed && crossUp && baseOk) { armed = true; arms++; marks.push({ i, k: 'arm' }); }
+   171:       }
+   172:       if (pos || !armed) continue;
+   173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+  --
+   181:       else if (!(b.c > ind.ema[i])) why = 'ema';
+   182:       else if (b.hms < P._dispU && ind.disp[i] > P.DispMax) why = 'disp';
+   183:       else if (!ind.tickOk[i]) why = 'tick';
+>  184:       if (why) { rej[why]++; marks.push({ i, k: 'rej', why }); continue; }
+   185:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0 };
+   186:       armed = false;
+   187:       marks.push({ i, k: 'entry' });
+  --
+   184:       if (why) { rej[why]++; marks.push({ i, k: 'rej', why }); continue; }
+   185:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0 };
+   186:       armed = false;
+>  187:       marks.push({ i, k: 'entry' });
+   188:     }
+   189:     if (pos && lastI >= 0) closeTrade(lastI, bars[lastI].c, 'eod');
+   190:     return { trades, marks, rej, arms, sigs, limMode, pbDone, held };
+  --
+   187:       marks.push({ i, k: 'entry' });
+   188:     }
+   189:     if (pos && lastI >= 0) closeTrade(lastI, bars[lastI].c, 'eod');
+>  190:     return { trades, marks, rej, arms, sigs, limMode, pbDone, held };
+   191:   }
+   192:   function summarize(tr) {
+   193:     const n = tr.length; let w = 0, sum = 0, best = -Infinity, worst = Infinity, mfe = 0;
+  --
+== tools/sz-engine3.cjs
+    16:   }
+    17:   function createSim(bars, ind, P, ctx, RP, hooks) {
+    18:     hooks = hooks || {};
+>   19:     const trades = [], marks = [];
+    20:     const rej = { time: 0, count: 0, gap: 0, lim: 0, ema: 0, disp: 0, tick: 0 };
+    21:     const armMode = P.ArmMode === 'cross' ? 'cross' : 'state';
+    22:     const noLoss = Number(P.SafeNoLoss == null ? 1 : P.SafeNoLoss) > 0;
+  --
+    37:         mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held };
+    38:       if (pos.parts.length) t.parts = pos.parts.map(q => ({ i: q.i, px: q.px, frac: q.frac, why: q.why }));
+    39:       trades.push(t);
+>   40:       marks.push({ i, k: 'exit', why, ret });
+    41:       const lastRet = (px / pos.entry - 1) * 100 - fee;
+    42:       pos = null; lastExit = i;
+    43:       if (hooks.onExit) hooks.onExit(t, lastRet, bars[i]);
+  --
+    88:       const baseOk = safe && ctx.dayComplete && ind.taamt[i] > P.StrongA && (i - ind.dayStart[i]) >= P.ArmSkip;
+    89:       if (armMode === 'state') {
+    90:         const want = !pos && baseOk && ind.n[i] > 0;
+>   91:         if (want && !armed) { arms++; marks.push({ i, k: 'arm' }); }
+    92:         armed = want;
+    93:       } else {
+    94:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+  --
+    94:         if (armed && (!safe || ind.n[i] < 0)) armed = false;
+    95:         const prevSame = i > 0 && (!P.ArmSameSession || bars[i - 1].d === b.d);
+    96:         const crossUp = prevSame && ind.n[i - 1] <= 0 && ind.n[i] > 0;
+>   97:         if (!pos && !armed && crossUp && baseOk) { armed = true; arms++; marks.push({ i, k: 'arm' }); }
+    98:       }
+    99:       if (pos || !armed) return;
+   100:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));
+  --
+   118:         }
+   119:       }
+   120:       if (!why && hooks.canEnter) { const g = hooks.canEnter(i, b); if (!g.ok) why = 'r_' + g.why; }
+>  121:       if (why) { rej[why] = (rej[why] || 0) + 1; marks.push({ i, k: 'rej', why }); return; }
+   122:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0, parts: [], frac: 1, r: op };
+   123:       armed = false;
+   124:       marks.push({ i, k: 'entry' });
+  --
+   121:       if (why) { rej[why] = (rej[why] || 0) + 1; marks.push({ i, k: 'rej', why }); return; }
+   122:       pos = { idx: i, entry: b.c * (1 + P.SlipPct / 100), hi: b.c, lo: b.c, peakC: b.c, reached: false, held: 0, parts: [], frac: 1, r: op };
+   123:       armed = false;
+>  124:       marks.push({ i, k: 'entry' });
+   125:       if (hooks.onEntry) hooks.onEntry(i, b);
+   126:     }
+   127:     const result = () => ({ trades, marks, rej, arms, sigs, limMode, pbDone, held });
+  --
+   124:       marks.push({ i, k: 'entry' });
+   125:       if (hooks.onEntry) hooks.onEntry(i, b);
+   126:     }
+>  127:     const result = () => ({ trades, marks, rej, arms, sigs, limMode, pbDone, held });
+   128:     return {
+   129:       step,
+   130:       curRet: () => (pos && lastI >= 0 ? (bars[lastI].c / pos.entry - 1) * 100 - fee : null),
+  --
+== tools/sz-guard-selftest.cjs
+   123: t('validate bad action', () => throws({ patterns: { G02: { action: 'x' } } }, 'G02.action'));
+   124: t('profiles load (GP000 passive, others active)', () => {
+   125:   const dir = process.argv[2]; if (!dir || !fs.existsSync(dir)) return 'profiles dir missing: ' + dir;
+>  126:   const fl = fs.readdirSync(dir).filter(f => /^GP\d+\.json$/.test(f)).sort(); if (!fl.length) return 'no GP*.json';
+   127:   for (const f of fl) {
+   128:     const u = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8').replace(/^\uFEFF/, '')), g = G.load(u), id = f.replace('.json', '');
+   129:     if (g.id !== id) return f + ' id ' + g.id;
+  --
+== tools/sz-guard.cjs
+    54:   if (!Array.isArray(G.ledger.mins) || !G.ledger.mins.length || G.ledger.mins.some(m => !(m > 0))) e.push('ledger.mins');
+    55:   return e;
+    56: }
+>   57: function load(u) {
+    58:   u = u || {};
+    59:   const bad = unknownKeys(u);
+    60:   if (bad.length) throw new Error('guard: unknown keys ' + bad.join(','));
+  --
+== tools/sz-guard11.cjs
+    67:   if (!Array.isArray(G.ledger.mins) || !G.ledger.mins.length || G.ledger.mins.some(m => !(m > 0))) e.push('ledger.mins');
+    68:   return e;
+    69: }
+>   70: function load(u) {
+    71:   u = u || {};
+    72:   const bad = unknownKeys(u);
+    73:   if (bad.length) throw new Error('guard: unknown keys ' + bad.join(','));
+  --
+== tools/sz-lab-guard.cjs
+    15: fs.mkdirSync(OUT, { recursive: true });
+    16: if (!fs.existsSync(MAN)) die('manifest missing');
+    17: const man = readJson(MAN);
+>   18: function loadEng(name) {
+    19:   const e = man.engines && man.engines[name];
+    20:   if (!e) die('engine not registered: ' + name);
+    21:   const f = path.join(ENG, e.file);
+  --
+    74:   }
+    75:   return null;
+    76: }
+>   77: function loadTicksText(text) {
+    78:   const rows = parseCsv(text);
+    79:   if (rows.length < 2) throw new Error('empty csv');
+    80:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   101:   return bars;
+   102: }
+   103: // ---- daily: same file as lab3, but also returns prev close ----
+>  104: function loadDaily2(code, date, warn) {
+   105:   const f = path.join(dailyDir, code + '.csv');
+   106:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   107:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   119: 
+   120: // ---- strategies (same rules as lab3) ----
+   121: const lib = {};
+>  122: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   123:   const s = readJson(path.join(FRZ, f));
+   124:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   125:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+  --
+   125:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   126: }
+   127: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+>  128: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+   129:   const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = Object.assign({ kind: 'survivor' }, s);
+   130: }
+   131: function resolve(id) {
+  --
+   159: // ---- guard profiles ----
+   160: let gwant = list(A('guards'));
+   161: const guards = [];
+>  162: for (const f of fs.readdirSync(GDIR).filter(x => /^GP\d+\.json$/.test(x)).sort()) {
+   163:   const id = f.replace('.json', '');
+   164:   if (gwant.length && gwant.indexOf(id) < 0 && id !== 'GP000') continue;
+   165:   guards.push({ id, P: G.load(readJson(path.join(GDIR, f))) });
+  --
+   167: if (!guards.length || guards[0].id !== 'GP000' || !G.isPassive(guards[0].P)) die('GP000 missing or not passive');
+   168: 
+   169: // ---- dataset ----
+>  170: const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(B.params.Match)).sort();
+   171: if (!files.length) die('no tick csv matching ' + B.params.Match);
+   172: const items0 = [];
+   173: for (const f of files) {
+  --
+== tools/sz-lab-guard11.cjs
+    21: fs.mkdirSync(OUT, { recursive: true });
+    22: if (!fs.existsSync(MAN)) die('manifest missing');
+    23: const man = readJson(MAN);
+>   24: function loadEng(name) {
+    25:   const e = man.engines && man.engines[name];
+    26:   if (!e) die('engine not registered: ' + name);
+    27:   const f = path.join(ENG, e.file);
+  --
+    30:   return require(f);
+    31: }
+    32: const V1 = loadEng('v1'), R = loadEng('risk1'), E3 = loadEng('v3')(V1, R);
+>   33: function loadGuard(dir, file, ver) {
+    34:   const mf = path.join(dir, 'manifest.json'), f = path.join(ROOT, 'tools', file);
+    35:   if (!fs.existsSync(mf) || !fs.existsSync(f)) die('guard not registered: ' + file);
+    36:   if (sha(fs.readFileSync(f)) !== readJson(mf).sha256) die('guard hash mismatch: ' + file);
+  --
+   136:   }
+   137:   return null;
+   138: }
+>  139: function loadTicksText(text) {
+   140:   const rows = parseCsv(text);
+   141:   if (rows.length < 2) throw new Error('empty csv');
+   142:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   162:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   163:   return bars;
+   164: }
+>  165: function loadDaily2(code, date, warn) {
+   166:   const f = path.join(dailyDir, code + '.csv');
+   167:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   168:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   194: 
+   195: // ---- strategies ----
+   196: const lib = {};
+>  197: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   198:   const s = readJson(path.join(FRZ, f));
+   199:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   200:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+  --
+   200:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   201: }
+   202: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+>  203: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+   204:   const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = Object.assign({ kind: 'survivor' }, s);
+   205: }
+   206: function resolve(id) {
+  --
+   233: 
+   234: // ---- guard profiles ----
+   235: const gwant = list(A('guards')), guards = [];
+>  236: for (const f of fs.readdirSync(GDIR).filter(x => /^GP\d+\.json$/.test(x)).sort()) {
+   237:   const id = f.replace('.json', '');
+   238:   if (gwant.length && gwant.indexOf(id) < 0 && id !== 'GP000') continue;
+   239:   guards.push({ id, P: G.load(readJson(path.join(GDIR, f))) });
+  --
+   239:   guards.push({ id, P: G.load(readJson(path.join(GDIR, f))) });
+   240: }
+   241: if (!guards.length || guards[0].id !== 'GP000' || !G.isPassive(guards[0].P)) die('GP000 missing or not passive');
+>  242: const oldGuards = fs.readdirSync(GDIR0).filter(x => /^GP\d+\.json$/.test(x)).sort().map(f => {
+   243:   const raw = readJson(path.join(GDIR0, f)); return { id: f.replace('.json', ''), P0: G0.load(raw), P1: G.load(raw) };
+   244: });
+   245: if (!oldGuards.length) die('no guard-1.0 profiles for parity');
+  --
+   245: if (!oldGuards.length) die('no guard-1.0 profiles for parity');
+   246: 
+   247: // ---- dataset ----
+>  248: const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(B.params.Match)).sort();
+   249: if (!files.length) die('no tick csv matching ' + B.params.Match);
+   250: const items0 = [];
+   251: for (const f of files) {
+  --
+== tools/sz-lab.cjs
+    79:   }
+    80:   return null;
+    81: }
+>   82: function loadTicksText(text) {
+    83:   const rows = parseCsv(text);
+    84:   if (rows.length < 2) throw new Error('empty csv');
+    85:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   105:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   106:   return bars;
+   107: }
+>  108: function loadDaily(code, date, warn) {
+   109:   const f = path.join(dailyDir, code + '.csv');
+   110:   if (!fs.existsSync(f)) { warn.push('일봉 없음'); return null; }
+   111:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   128:   for (let i = k; i < it.bars.length && it.bars[i].d === it.date && it.bars[i].hms <= 153000; i++) if (it.bars[i].h > hi) hi = it.bars[i].h;
+   129:   return { sp, mfe: (hi / sp - 1) * 100 };
+   130: }
+>  131: function loadDataset(match) {
+   132:   if (!fs.existsSync(tickDir)) die('no folder ' + tickDir);
+   133:   const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(match)).sort();
+   134:   if (!files.length) die('no tick csv matching ' + match);
+  --
+   130: }
+   131: function loadDataset(match) {
+   132:   if (!fs.existsSync(tickDir)) die('no folder ' + tickDir);
+>  133:   const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(match)).sort();
+   134:   if (!files.length) die('no tick csv matching ' + match);
+   135:   const items = [];
+   136:   for (const f of files) {
+  --
+   164:   }
+   165:   return { per, tot: stats(all) };
+   166: }
+>  167: function loadEngine(man, name) {
+   168:   const e = man.engines && man.engines[name];
+   169:   if (!e) throw new Error('engine not registered: ' + name);
+   170:   const f = path.join(ENG, e.file), buf = fs.readFileSync(f);
+  --
+   215: // ================================================================ RUN
+   216: if (!fs.existsSync(MAN)) die('not frozen yet: run 14_lab.ps1 -Freeze');
+   217: const man = readJson(MAN), lib = {};
+>  218: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   219:   const s = readJson(path.join(FRZ, f));
+   220:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   221:   lib[s.id] = s;
+  --
+   244:   man.seeded = true; writeJson(MAN, man); say('[정보] 후보 전략 ' + w + '개 생성: ' + CAND);
+   245: }
+   246: const surv = {};
+>  247: for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) { const s = readJson(path.join(SURV, f)); surv[s.id] = s; if (!lib[s.id]) lib[s.id] = s; }
+   248: const engC = {}; const getEng = n => engC[n] || (engC[n] = loadEngine(man, n));
+   249: const ds = loadDataset(B.params.Match);
+   250: if (!ds.items.length) die('no usable tick files');
+  --
+   261: for (const id of Object.keys(lib)) if (id !== B.id && lib[id].frozen && want(id)) runs.push({ def: lib[id], params: lib[id].params, kind: 'reference' });
+   262: for (const id of Object.keys(surv).sort()) if (want(id)) runs.push({ def: surv[id], params: surv[id].params, kind: 'survivor' });
+   263: let errs = 0;
+>  264: for (const f of fs.readdirSync(CAND).filter(x => x.endsWith('.json')).sort()) {
+   265:   let c; try { c = readJson(path.join(CAND, f)); } catch (e) { say('[오류] ' + f + ': JSON ' + e.message); errs++; continue; }
+   266:   if (!c.id || surv[c.id] || (lib[c.id] && lib[c.id].frozen) || !want(c.id)) continue;
+   267:   try { runs.push({ def: c, params: resolveParams(c.base || B.id, c.overrides, lib), kind: 'candidate' }); }
+  --
+== tools/sz-lab3.cjs
+    15: [SURV3, OUT].forEach(d => fs.mkdirSync(d, { recursive: true }));
+    16: if (!fs.existsSync(MAN)) die('manifest missing: run 14_lab.ps1 -Freeze first');
+    17: const man = readJson(MAN);
+>   18: function loadEng(name) {
+    19:   const e = man.engines && man.engines[name];
+    20:   if (!e) die('engine not registered: ' + name);
+    21:   const f = path.join(ENG, e.file);
+  --
+    75:   const S0 = readJson(path.join(FRZ, man.baseline + '.json'));
+    76:   const tgt = Number(S0.params.TargetPct);
+    77:   if (!(tgt > 0)) die('baseline TargetPct invalid: ' + S0.params.TargetPct);
+>   78:   for (const f of fs.readdirSync(RISK).filter(x => /\.json$/i.test(x)).sort()) {
+    79:     const fp = path.join(RISK, f), raw = readJson(fp);
+    80:     const unk = R.unknownKeys(raw); if (unk.length) die(f + ': unknown keys ' + unk.join(','));
+    81:     const v = R.validate(R.load(raw)); if (v.length) die(f + ': invalid ' + v.join(','));
+  --
+   219:   }
+   220:   return null;
+   221: }
+>  222: function loadTicksText(text) {
+   223:   const rows = parseCsv(text);
+   224:   if (rows.length < 2) throw new Error('empty csv');
+   225:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   245:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   246:   return bars;
+   247: }
+>  248: function loadDaily(code, date, warn) {
+   249:   const f = path.join(dailyDir, code + '.csv');
+   250:   if (!fs.existsSync(f)) { warn.push('일봉 없음'); return null; }
+   251:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   268:   for (let i = k; i < it.bars.length && it.bars[i].d === it.date && it.bars[i].hms <= 153000; i++) if (it.bars[i].h > hi) hi = it.bars[i].h;
+   269:   return { sp, mfe: (hi / sp - 1) * 100 };
+   270: }
+>  271: function loadDataset(match) {
+   272:   if (!fs.existsSync(tickDir)) die('no folder ' + tickDir);
+   273:   const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(match)).sort();
+   274:   if (!files.length) die('no tick csv matching ' + match);
+  --
+   270: }
+   271: function loadDataset(match) {
+   272:   if (!fs.existsSync(tickDir)) die('no folder ' + tickDir);
+>  273:   const files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(match)).sort();
+   274:   if (!files.length) die('no tick csv matching ' + match);
+   275:   const items = [];
+   276:   for (const f of files) {
+  --
+   293: const fmtT = h => { const s = String(h).padStart(6, '0'); return s.slice(0, 2) + ':' + s.slice(2, 4) + ':' + s.slice(4); };
+   294: 
+   295: const lib = {};
+>  296: for (const f of fs.readdirSync(FRZ).filter(x => x.endsWith('.json'))) {
+   297:   const s = readJson(path.join(FRZ, f));
+   298:   if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) die('frozen strategy modified or unknown: ' + s.id);
+   299:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+  --
+   299:   lib[s.id] = Object.assign({ kind: 'frozen' }, s);
+   300: }
+   301: const B = lib[man.baseline]; if (!B) die('baseline missing: ' + man.baseline);
+>  302: if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) {
+   303:   const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = Object.assign({ kind: 'survivor' }, s);
+   304: }
+   305: function resolve(id) {
+  --
+   316: const strats = sids.map(resolve);
+   317: for (const s of strats) if ((s.engine || 'v1') !== 'v1') die(s.id + ': engine ' + s.engine + ' not supported (v3 wraps v1 params)');
+   318: const pwant = list(O.Profiles), profs = [];
+>  319: for (const f of fs.readdirSync(RISK).filter(x => /\.json$/i.test(x)).sort()) {
+   320:   const id = f.replace(/\.json$/i, '');
+   321:   if (pwant.length && pwant.indexOf(id) < 0 && id !== 'RP000') continue;
+   322:   const buf = fs.readFileSync(path.join(RISK, f)), raw = JSON.parse(buf.toString('utf8').replace(/^\uFEFF/, ''));
+  --
+== tools/sz-render.js
+     1: (function () {
+     2:   'use strict';
+     3:   var D = window.SZDATA;
+>    4:   var cv = document.getElementById('cv'), g = cv.getContext('2d'), tip = document.getElementById('tip');
+     5:   var N = D.c.length, v0 = 0, v1 = N, cur = -1, drag = null;
+     6:   var PAN = [['price', 40], ['mom', 13], ['macd', 15], ['amt', 14], ['tick', 14]];
+     7:   var LM = 8, RM = 72, TOP = 6, BOT = 20, GAP = 8, W = 0, H = 0, lay = {};
+  --
+    68:         g.strokeStyle = t.ret > 0 ? 'rgba(255,90,90,.9)' : 'rgba(90,200,255,.9)'; g.setLineDash([4, 3]);
+    69:         g.beginPath(); g.moveTo(X(t.inI), y(t.inPx)); g.lineTo(X(t.outI), y(t.outPx)); g.stroke(); g.setLineDash([]);
+    70:       });
+>   71:       D.marks.forEach(function (m) {
+    72:         if (m.i < v0 || m.i >= v1) return;
+    73:         var x = X(m.i);
+    74:         if (m.k === 'arm') tri(x, y(D.l[m.i]) + 6, 4, '#ffdd00', true);
+  --
+== tools/sz-risk-selftest.cjs
+   148: t('profiles', () => {
+   149:   const dir = process.argv[2];
+   150:   if (!dir || !fs.existsSync(dir)) throw new Error('profile dir missing: ' + dir);
+>  151:   const files = fs.readdirSync(dir).filter(f => /\.json$/i.test(f));
+   152:   if (files.length < 7) throw new Error('profiles < 7: ' + files.length);
+   153:   for (const f of files) {
+   154:     const raw = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+  --
+== tools/sz-risk.cjs
+    39:   for (const k of Object.keys(b)) o[k] = (isObj(a && a[k]) && isObj(b[k])) ? merge(a[k], b[k]) : b[k];
+    40:   return o;
+    41: }
+>   42: function load(profile) { return merge(DEF, profile || {}); }
+    43: function enabledList(P) {
+    44:   const out = [];
+    45:   (function walk(o, pre) {
+  --
+== tools/sz-run.cjs
+     9: const tickDir = path.join(ROOT, 'data', 'ticks'), dailyDir = path.join(ROOT, 'data', 'daily'), outDir = path.join(ROOT, 'out', 'trade');
+    10: fs.mkdirSync(outDir, { recursive: true });
+    11: if (!fs.existsSync(tickDir)) die('no folder: ' + tickDir);
+>   12: let files = fs.readdirSync(tickDir).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(P.Match));
+    13: if (P.Date) files = files.filter(f => f.includes(P.Date));
+    14: if (!files.length) die('no tick csv matching "' + P.Match + '" in ' + tickDir);
+    15: const RENDER = fs.readFileSync(path.join(__dirname, 'sz-render.js'), 'utf8');
+  --
+    40:   }
+    41:   return null;
+    42: }
+>   43: function loadTicks(file) {
+    44:   const rows = parseCsv(fs.readFileSync(file, 'utf8'));
+    45:   if (rows.length < 2) throw new Error('empty csv');
+    46:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+    66:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+    67:   return bars;
+    68: }
+>   69: function loadDaily(code, date, warn) {
+    70:   const f = path.join(dailyDir, code + '.csv');
+    71:   if (!fs.existsSync(f)) { warn.push('일봉 파일 없음(' + f + '): 전일 상한가/급등 필터 미적용 → 12_fetch_daily.ps1 실행'); return null; }
+    72:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   143:       mom: rd(ind.mom, 3), n: rd(ind.n, 5), sig: rd(ind.sig, 5), ema: rd(ind.ema, 1), st: rd(ind.st, 1), stDir: sl(ind.stDir),
+   144:       amt: rd(ind.amt, 0), taamt: rd(ind.taamt, 0), big: sl(ind.big), cnt1: sl(ind.cnt1), thr: rd(ind.thr, 0), tickOk: sl(ind.tickOk),
+   145:       disp: rd(ind.disp, 2), safe: sl(ind.safe),
+>  146:       trades: R.trades.map(shiftT), marks: R.marks.map(m => Object.assign({}, m, { i: m.i - v0 })),
+   147:       emaLen: Pf.EmaLen, momLen: Pf.MomLen, safeTh: Pf.SafeTh, bigMode: Pf.BigMode, tickK: Pf.TickK };
+   148:     const rejTxt = Object.keys(R.rej).map(k => k + '=' + R.rej[k]).join(' ');
+   149:     const head = '<h2>' + code + ' · ' + date + '</h2><div>전일 ' + (dly && isFinite(dly.chg) ? sgn(dly.chg) + '%' : '-') +
+  --
+== tools/ui/engines.cjs
+    71: 
+    72: function ver(m) { return m && m.VERSION ? String(m.VERSION) : '-'; }
+    73: 
+>   74: function load(root) {
+    75:   const v = verify(root);
+    76:   if (!v.ok) {
+    77:     const bad = v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + '(' + r.err + ')'; })
+  --
+== tools/ui/probe.cjs
+    22: 
+    23: function walk(dir, depth, out, lim) {
+    24:   let ents;
+>   25:   try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    26:   ents.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+    27:   for (const e of ents) {
+    28:     if (out.length >= lim) return;
+  --
+== tools/ui/report.cjs
+    19: }
+    20: function sha(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }
+    21: 
+>   22: function loadSecrets(envPath) {
+    23:   const list = [];
+    24:   let txt = '';
+    25:   try { txt = fs.readFileSync(envPath, 'utf8'); } catch (e) { return { list: list, ok: false }; }
+  --
+   223:     if (Buffer.byteLength(txt) > MAX + 4096) return 'cap exceeded ' + Buffer.byteLength(txt);
+   224:     if (txt.indexOf('#CUT big') < 0) return 'big section not cut';
+   225:     if (txt.indexOf('#DATA small') < 0) return 'small section missing';
+>  226:     const det = fs.readdirSync(path.join(res.dir, 'detail'));
+   227:     const bigf = det.filter(function (n) { return n.indexOf('big') >= 0; })[0];
+   228:     if (!bigf || fs.statSync(path.join(res.dir, 'detail', bigf)).size < 300 * 1024) return 'detail full copy missing';
+   229:     return true;
+  --
+== tools/ui/s2.cjs
+    34:   for (const sub of ['ticks', 'daily']) {
+    35:     const dir = P('data', sub);
+    36:     if (!fs.existsSync(dir)) continue;
+>   37:     for (const f of fs.readdirSync(dir).filter(x => /\.csv$/i.test(x)).sort()) {
+    38:       const text = fs.readFileSync(path.join(dir, f), 'utf8');
+    39:       const r = sub === 'ticks' ? K.roundTripTick(text) : K.roundTripDaily(text);
+    40:       if (sub === 'ticks') { nT++; if (r.ok) okT++; if (f === PRIMARY_TICK) primT = r; }
+  --
+    52:   const dir = P('data', 'ticks');
+    53:   const rows = [];
+    54:   let ok = 0, n = 0, prim = null;
+>   55:   for (const f of fs.readdirSync(dir).filter(x => TICK_RE.test(x)).sort()) {
+    56:     const m = f.match(TICK_RE), code = m[1], mkt = m[2], scope = m[3], date = m[4];
+    57:     n++;
+    58:     const oldBuf = fs.readFileSync(path.join(dir, f)), oldText = oldBuf.toString('utf8');
+  --
+    90:   const dir = P('data', 'daily');
+    91:   const rows = [];
+    92:   let ok = 0, n = 0, prim = null;
+>   93:   for (const f of fs.readdirSync(dir).filter(x => /^[0-9A-Z]{6}\.csv$/.test(x)).sort()) {
+    94:     const code = f.slice(0, 6);
+    95:     n++;
+    96:     const oldBuf = fs.readFileSync(path.join(dir, f)), oldText = oldBuf.toString('utf8');
+  --
+== tools/ui/s3.cjs
+     1: 'use strict';
+>    2: // S3 runner: screen CSV -> plan / archive ticks into data\rest\ticks. Writes out\FOR_OPUS.txt
+     3: const fs = require('fs'), path = require('path'), crypto = require('crypto');
+     4: const K = require('./kiwoom-fetch.cjs');
+     5: const A = require('./archive.cjs');
+  --
+    39:   return s;
+    40: }
+    41: 
+>   42: function loadScreen() {
+    43:   const dir = P('data', 'screen');
+    44:   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /\.csv$/i.test(f)).sort() : [];
+    45:   if (!files.length) { chk('screen csv', false, 'no .csv in data\\screen (use -ScreenCsv <path>)'); return null; }
+  --
+    41: 
+    42: function loadScreen() {
+    43:   const dir = P('data', 'screen');
+>   44:   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /\.csv$/i.test(f)).sort() : [];
+    45:   if (!files.length) { chk('screen csv', false, 'no .csv in data\\screen (use -ScreenCsv <path>)'); return null; }
+    46:   const rows = [], lines = [];
+    47:   let maxDate = '';
+  --
+== tools/ui/s4_causal.cjs
+    81:   }
+    82:   return null;
+    83: }
+>   84: function loadTicksText(text) {
+    85:   const rows = parseCsv(text);
+    86:   if (rows.length < 2) throw new Error('empty csv');
+    87:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   107:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   108:   return bars;
+   109: }
+>  110: function loadDaily2(dailyDir, code, date, warn) {
+   111:   const f = path.join(dailyDir, code + '.csv');
+   112:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   113:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   154: function findCapCsv() {
+   155:   const a = A('csv'); if (a) return path.resolve(a);
+   156:   const cand = [], walk = (d, depth) => {
+>  157:     let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+   158:     for (const e of ents) {
+   159:       const p = path.join(d, e.name);
+   160:       if (e.isDirectory()) { if (depth > 0 && !/^(ticks|raw|daily|node_modules|\.git)$/i.test(e.name)) walk(p, depth - 1); }
+  --
+   173: }
+   174: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+   175: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  176: function loadCap(f) {
+   177:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   178:   for (const r of rows.slice(1)) {
+   179:     const sv = String(r[7] || '').trim(); stat[sv] = (stat[sv] || 0) + 1;
+  --
+   204:   if (!ok('risk1 tickSize()', TS && [1500, 3000, 15000, 30000].every(p => TS(p) > 0), TS ? 'ok' : 'R.tickSize missing')) return 'FAIL';
+   205: 
+   206:   const SD = path.join(ROOT, 'strategies'), man = readJson(path.join(SD, 'manifest.json')), lib = {};
+>  207:   for (const f of fs.readdirSync(path.join(SD, 'frozen')).filter(x => x.endsWith('.json'))) {
+   208:     const s = readJson(path.join(SD, 'frozen', f));
+   209:     if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) throw new Error('frozen strategy modified or unknown: ' + s.id);
+   210:     lib[s.id] = s;
+  --
+   211:   }
+   212:   const B = lib[man.baseline]; if (!B) throw new Error('baseline missing: ' + man.baseline);
+   213:   const SURV = path.join(SD, 'survivors');
+>  214:   if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) { const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = s; }
+   215:   const resolve = id => {
+   216:     if (lib[id]) return lib[id];
+   217:     const f = path.join(SD, 'candidates', id + '.json'); if (!fs.existsSync(f)) throw new Error('strategy not found: ' + id);
+  --
+   244: 
+   245:   // gate: repro 11/02
+   246:   const oldT = path.join(ROOT, 'data', 'ticks'), oldD = path.join(ROOT, 'data', 'daily');
+>  247:   const oldItems = fs.readdirSync(oldT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort().map(f => loadItem(oldT, oldD, f));
+   248:   const EXP = { S000: { n: 33, sum: '5.94' }, C013: { n: 31, sum: '8.29' } };
+   249:   let reproOk = true;
+   250:   for (const s of strats) {
+  --
+   268:   if (!ok('capture csv found', !!capF, 'pass -Csv')) return 'FAIL';
+   269:   { const c = loadCap(capF); cap = c.m; sums.push('capture csv=' + capF + ' rows=' + c.rows + ' bad=' + c.bad + ' stockDays=' + cap.size); }
+   270: 
+>  271:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+   272:   const items = []; let excl = 0;
+   273:   for (const f of files) { let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; continue; } if (it.start >= MINW) items.push(it); }
+   274:   items.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.code < b.code ? -1 : 1));
+  --
+== tools/ui/s4_entryq.cjs
+    84:   }
+    85:   return null;
+    86: }
+>   87: function loadTicksText(text) {
+    88:   const rows = parseCsv(text);
+    89:   if (rows.length < 2) throw new Error('empty csv');
+    90:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   110:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   111:   return bars;
+   112: }
+>  113: function loadDaily2(dailyDir, code, date, warn) {
+   114:   const f = path.join(dailyDir, code + '.csv');
+   115:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   116:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   157: function findCapCsv() {
+   158:   const a = A('csv'); if (a) return path.resolve(a);
+   159:   const cand = [], walk = (d, depth) => {
+>  160:     let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+   161:     for (const e of ents) {
+   162:       const p = path.join(d, e.name);
+   163:       if (e.isDirectory()) { if (depth > 0 && !/^(ticks|raw|daily|node_modules|\.git)$/i.test(e.name)) walk(p, depth - 1); }
+  --
+   176: }
+   177: const toT = (d, hms) => Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), Math.floor(hms / 10000), Math.floor(hms / 100) % 100, hms % 100) / 1000;
+   178: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  179: function loadCap(f) {
+   180:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   181:   for (const r of rows.slice(1)) {
+   182:     const sv = String(r[7] || '').trim(); stat[sv] = (stat[sv] || 0) + 1;
+  --
+   209:   if (!ok('risk1 tickSize()', TS && TSMP.every(p => TS(p) > 0), TS ? TSMP.map(p => p + '=' + TS(p)).join(' ') : 'R.tickSize missing')) return 'FAIL';
+   210: 
+   211:   const SD = path.join(ROOT, 'strategies'), man = readJson(path.join(SD, 'manifest.json')), lib = {};
+>  212:   for (const f of fs.readdirSync(path.join(SD, 'frozen')).filter(x => x.endsWith('.json'))) {
+   213:     const s = readJson(path.join(SD, 'frozen', f));
+   214:     if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) throw new Error('frozen strategy modified or unknown: ' + s.id);
+   215:     lib[s.id] = s;
+  --
+   216:   }
+   217:   const B = lib[man.baseline]; if (!B) throw new Error('baseline missing: ' + man.baseline);
+   218:   const SURV = path.join(SD, 'survivors');
+>  219:   if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) { const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = s; }
+   220:   const resolve = id => {
+   221:     if (lib[id]) return lib[id];
+   222:     const f = path.join(SD, 'candidates', id + '.json'); if (!fs.existsSync(f)) throw new Error('strategy not found: ' + id);
+  --
+   249: 
+   250:   // gate: repro 11/02
+   251:   const oldT = path.join(ROOT, 'data', 'ticks'), oldD = path.join(ROOT, 'data', 'daily');
+>  252:   const oldItems = fs.readdirSync(oldT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort().map(f => loadItem(oldT, oldD, f));
+   253:   const EXP = { S000: { n: 33, sum: '5.94' }, C013: { n: 31, sum: '8.29' } };
+   254:   let reproOk = true;
+   255:   for (const s of strats) {
+  --
+   276:   sums.push(capInfo);
+   277: 
+   278:   // archive
+>  279:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+   280:   const items = []; let excl = 0;
+   281:   for (const f of files) { let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; continue; } if (it.start >= MINW) items.push(it); }
+   282:   items.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.code < b.code ? -1 : 1));
+  --
+== tools/ui/s4_period.cjs
+     1: 'use strict';
+>    2: // s4_period.cjs (period-1.0) - S4-1 period backtest on data\rest archive. Read-only on engines and data.
+     3: // Eligible: target-day stock-days with warmup >= MinWarm (S4-0: 400 -> 99% same trades vs 800). Runs use ALL available warmup bars.
+     4: // Gates: engine hashes, repro 11/02, rest parity (copied from s4_warmup.cjs), cross-check vs S4-0 full>=REF set.
+     5: // sumAdj: exits after 15:20 by time/eod/r_time/r_flat re-priced at KRX daily close (delta method, approx). Original ret untouched.
+  --
+    78:   }
+    79:   return null;
+    80: }
+>   81: function loadTicksText(text) {
+    82:   const rows = parseCsv(text);
+    83:   if (rows.length < 2) throw new Error('empty csv');
+    84:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   104:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   105:   return bars;
+   106: }
+>  107: function loadDaily2(dailyDir, code, date, warn) {
+   108:   const f = path.join(dailyDir, code + '.csv');
+   109:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   110:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   153: function findCapCsv() {
+   154:   const a = A('csv'); if (a) return path.resolve(a);
+   155:   const cand = [], walk = (d, depth) => {
+>  156:     let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+   157:     for (const e of ents) {
+   158:       const p = path.join(d, e.name);
+   159:       if (e.isDirectory()) { if (depth > 0 && !/^(ticks|raw|daily|node_modules|\.git)$/i.test(e.name)) walk(p, depth - 1); }
+  --
+   170:   }
+   171:   return '';
+   172: }
+>  173: function loadCap(f) {
+   174:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(); let bad = 0;
+   175:   for (const r of rows.slice(1)) {
+   176:     const d = String(r[2] || '').replace(/\D/g, '').slice(0, 8);
+  --
+   213:   if (!ok('V1 api prep/compute/simulate', V1 && ['prep', 'compute', 'simulate'].every(k => typeof V1[k] === 'function'), Object.keys(V1 || {}).join(','))) return 'FAIL';
+   214: 
+   215:   const SD = path.join(ROOT, 'strategies'), man = readJson(path.join(SD, 'manifest.json')), lib = {};
+>  216:   for (const f of fs.readdirSync(path.join(SD, 'frozen')).filter(x => x.endsWith('.json'))) {
+   217:     const s = readJson(path.join(SD, 'frozen', f));
+   218:     if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) throw new Error('frozen strategy modified or unknown: ' + s.id);
+   219:     lib[s.id] = s;
+  --
+   220:   }
+   221:   const B = lib[man.baseline]; if (!B) throw new Error('baseline missing: ' + man.baseline);
+   222:   const SURV = path.join(SD, 'survivors');
+>  223:   if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) { const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = s; }
+   224:   const resolve = id => {
+   225:     if (lib[id]) return lib[id];
+   226:     const f = path.join(SD, 'candidates', id + '.json'); if (!fs.existsSync(f)) throw new Error('strategy not found: ' + id);
+  --
+   253: 
+   254:   // gate 2: repro 11/02
+   255:   const oldT = path.join(ROOT, 'data', 'ticks'), oldD = path.join(ROOT, 'data', 'daily');
+>  256:   const oldItems = fs.readdirSync(oldT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort().map(f => loadItem(oldT, oldD, f));
+   257:   const EXP = { S000: { n: 33, sum: '5.94' }, C013: { n: 31, sum: '8.29' } };
+   258:   let reproOk = true;
+   259:   for (const s of strats) {
+  --
+   279:   if (capF) { const c = loadCap(capF); cap = c.m; capInfo = 'capture csv=' + capF + ' rows=' + c.rows + ' bad=' + c.bad + ' stockDays=' + cap.size; }
+   280: 
+   281:   // scan archive
+>  282:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+   283:   const items = []; let loaded = 0, excl = 0, noDaily = 0, full = 0; const exL = [];
+   284:   for (const f of files) {
+   285:     let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; if (exL.length < 20) exL.push(f + ': ' + e.message); continue; }
+  --
+== tools/ui/s4_target.cjs
+    83:   }
+    84:   return null;
+    85: }
+>   86: function loadTicksText(text) {
+    87:   const rows = parseCsv(text);
+    88:   if (rows.length < 2) throw new Error('empty csv');
+    89:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   109:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   110:   return bars;
+   111: }
+>  112: function loadDaily2(dailyDir, code, date, warn) {
+   113:   const f = path.join(dailyDir, code + '.csv');
+   114:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   115:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   156: function findCapCsv() {
+   157:   const a = A('csv'); if (a) return path.resolve(a);
+   158:   const cand = [], walk = (d, depth) => {
+>  159:     let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+   160:     for (const e of ents) {
+   161:       const p = path.join(d, e.name);
+   162:       if (e.isDirectory()) { if (depth > 0 && !/^(ticks|raw|daily|node_modules|\.git)$/i.test(e.name)) walk(p, depth - 1); }
+  --
+   186: 
+   187: // fixed: csv percent cells look like "+3.24%" and "+0.87% @ 10:05"
+   188: const pct = s => num(String(s == null ? '' : s).split('@')[0].replace(/%/g, ''));
+>  189: function loadCap(f) {
+   190:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), m = new Map(), stat = {}; let bad = 0;
+   191:   for (const r of rows.slice(1)) {
+   192:     const sv = String(r[7] || '').trim(); stat[sv] = (stat[sv] || 0) + 1;
+  --
+   221:   sums.push('tickSize sample ' + TSMP.map(p => p + '=' + TS(p)).join(' '));
+   222: 
+   223:   const SD = path.join(ROOT, 'strategies'), man = readJson(path.join(SD, 'manifest.json')), lib = {};
+>  224:   for (const f of fs.readdirSync(path.join(SD, 'frozen')).filter(x => x.endsWith('.json'))) {
+   225:     const s = readJson(path.join(SD, 'frozen', f));
+   226:     if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) throw new Error('frozen strategy modified or unknown: ' + s.id);
+   227:     lib[s.id] = s;
+  --
+   228:   }
+   229:   const B = lib[man.baseline]; if (!B) throw new Error('baseline missing: ' + man.baseline);
+   230:   const SURV = path.join(SD, 'survivors');
+>  231:   if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) { const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = s; }
+   232:   const resolve = id => {
+   233:     if (lib[id]) return lib[id];
+   234:     const f = path.join(SD, 'candidates', id + '.json'); if (!fs.existsSync(f)) throw new Error('strategy not found: ' + id);
+  --
+   261: 
+   262:   // gate: repro 11/02
+   263:   const oldT = path.join(ROOT, 'data', 'ticks'), oldD = path.join(ROOT, 'data', 'daily');
+>  264:   const oldItems = fs.readdirSync(oldT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort().map(f => loadItem(oldT, oldD, f));
+   265:   const EXP = { S000: { n: 33, sum: '5.94' }, C013: { n: 31, sum: '8.29' } };
+   266:   let reproOk = true;
+   267:   for (const s of strats) {
+  --
+   287:   if (capF) { const c = loadCap(capF); cap = c.m; capInfo = 'capture csv=' + capF + ' rows=' + c.rows + ' bad=' + c.bad + ' stockDays=' + cap.size + ' status=' + JSON.stringify(c.stat); }
+   288: 
+   289:   // archive
+>  290:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+   291:   const items = []; let excl = 0;
+   292:   for (const f of files) { let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; continue; } if (it.start >= MINW) items.push(it); }
+   293:   items.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.code < b.code ? -1 : 1));
+  --
+== tools/ui/s4_warmup.cjs
+    79:   }
+    80:   return null;
+    81: }
+>   82: function loadTicksText(text) {
+    83:   const rows = parseCsv(text);
+    84:   if (rows.length < 2) throw new Error('empty csv');
+    85:   const hdr = rows[0].map(x => x.trim().toLowerCase());
+  --
+   105:   for (let i = 1; i < bars.length; i++) if (bars[i].t < bars[i - 1].t) { bars.sort((a, b) => a.t - b.t); break; }
+   106:   return bars;
+   107: }
+>  108: function loadDaily2(dailyDir, code, date, warn) {
+   109:   const f = path.join(dailyDir, code + '.csv');
+   110:   if (!fs.existsSync(f)) { warn.push('no daily csv'); return null; }
+   111:   const rows = parseCsv(fs.readFileSync(f, 'utf8')), h = rows[0].map(x => x.trim().toLowerCase());
+  --
+   163: 
+   164:   // strategies (same rule as lab: frozen hash-checked, then survivors, then candidates)
+   165:   const SD = path.join(ROOT, 'strategies'), man = readJson(path.join(SD, 'manifest.json')), lib = {};
+>  166:   for (const f of fs.readdirSync(path.join(SD, 'frozen')).filter(x => x.endsWith('.json'))) {
+   167:     const s = readJson(path.join(SD, 'frozen', f));
+   168:     if (!man.frozen || man.frozen[s.id] !== sha(JSON.stringify(s.params))) throw new Error('frozen strategy modified or unknown: ' + s.id);
+   169:     lib[s.id] = s;
+  --
+   170:   }
+   171:   const B = lib[man.baseline]; if (!B) throw new Error('baseline missing: ' + man.baseline);
+   172:   const SURV = path.join(SD, 'survivors');
+>  173:   if (fs.existsSync(SURV)) for (const f of fs.readdirSync(SURV).filter(x => x.endsWith('.json'))) { const s = readJson(path.join(SURV, f)); if (!lib[s.id]) lib[s.id] = s; }
+   174:   const resolve = id => {
+   175:     if (lib[id]) return lib[id];
+   176:     const f = path.join(SD, 'candidates', id + '.json'); if (!fs.existsSync(f)) throw new Error('strategy not found: ' + id);
+  --
+   204: 
+   205:   // gate 2: reproduce 11/02 from data\ticks + data\daily
+   206:   const oldT = path.join(ROOT, 'data', 'ticks'), oldD = path.join(ROOT, 'data', 'daily');
+>  207:   const oldItems = fs.readdirSync(oldT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort().map(f => loadItem(oldT, oldD, f));
+   208:   const EXP = { S000: { n: 33, sum: '5.94' }, C013: { n: 31, sum: '8.29' } };
+   209:   const rl = ['strategy items trades     sum    PF   MDD  expected'];
+   210:   let reproOk = true;
+  --
+   216:   data('repro_1102', rl);
+   217:   if (!reproOk) return 'FAIL';
+   218: 
+>  219:   // gate 3: data\rest pipeline = data\ticks pipeline on the S3 parity file
+   220:   const restT = path.join(ROOT, 'data', 'rest', 'ticks'), restD = path.join(ROOT, 'data', 'rest', 'daily');
+   221:   const PF = '0011A0_AL_120t_20261102.csv', a0 = oldItems.find(x => x.f === PF);
+   222:   if (!ok('rest parity file present', a0 && fs.existsSync(path.join(restT, PF)), PF)) return 'FAIL';
+  --
+   230:   if (chk.some(c => !c.c)) return 'FAIL';
+   231: 
+   232:   // scan archive
+>  233:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+   234:   const cov = [], full = [], exL = []; let excl = 0, noDaily = 0;
+   235:   for (const f of files) {
+   236:     let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; if (exL.length < 20) exL.push(f + ': ' + e.message); continue; }
+  --

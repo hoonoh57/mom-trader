@@ -1,0 +1,140 @@
+{
+  "checks": [
+    {
+      "name": "unit fetch toNum",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch readDotEnv",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch tickRow",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch fmtNet 0.####",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch fmtNet 0.00",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch fmtG",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch buildTick order/warmup/flags",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fetch buildDaily sort/unique/chg",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit archive decode",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit archive splitCsvLine",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit archive parseScreen",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit archive planItems",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit archive multi-day slice equals single-day fetch",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "screen rows",
+      "ok": true,
+      "info": "no usable rows"
+    },
+    {
+      "name": "window stock-days > 0",
+      "ok": true,
+      "info": "no status-OK rows in window (encoding? dates?)"
+    },
+    {
+      "name": "token",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "parity multi-day path 0011A0 20261102",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "fetch errors",
+      "ok": true,
+      "info": "0 codes failed (rerun resumes)"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "screen",
+      "rows": [
+        "five_percent.csv enc=utf8-bom header=ok rows=12096 range=20260506~20261103 badDate=0 badCode=0 status: 정상=11093 포착 분봉 없음=1003"
+      ]
+    },
+    {
+      "name": "window",
+      "rows": [
+        "date      need have skip | saved warmShort expired noBars trunc err",
+        "20260928   85    0    0 |     0     0     5     0     0     0",
+        "20260929   39    0    0 |     0     0     2     0     0     0",
+        "20260930   63    0    0 |     0     0     0     0     0     0",
+        "20261001   48    0    0 |     0     0     1     0     0     0",
+        "20261002   81    0    0 |     0     0     0     0     0     0",
+        "20261006  103    0    0 |     0     0     0     0     0     0",
+        "20261007   41    0    0 |     0     0     0     0     0     0",
+        "20261008   42    0    0 |     0     0     0     0     0     0",
+        "20261012   70    0    0 |     0     0     0     0     0     0",
+        "20261013   13    0    0 |     0     0     0     0     0     0",
+        "20261014   34    0    0 |     0     0     0     0     0     0",
+        "20261015    6    0    0 |     0     0     0     0     0     0",
+        "20261016   42    0    0 |     1     0     0     0     0     0",
+        "20261019   23    0    0 |     0     0     0     0     0     0",
+        "20261020   40    0    0 |     1     1     0     0     0     0",
+        "20261021  259    0    0 |     1     0     0     0     0     0",
+        "20261022   44    0    0 |     0     0     0     0     0     0",
+        "20261023   15    0    0 |     0     0     0     0     0     0",
+        "20261026   35    0    0 |     0     0     0     0     0     0",
+        "20261027   60    0    0 |     0     0     0     0     0     0",
+        "20261028  123    0    0 |     0     0     0     0     0     0",
+        "20261029   32    0    0 |     0     0     0     0     0     0",
+        "20261030   19    0    0 |     0     0     0     0     0     0",
+        "20261102   37    6    0 |     0     0     0     0     0     0",
+        "20261103   28    0    0 |     0     0     0     0     0     0"
+      ]
+    }
+  ],
+  "errs": [],
+  "summary": [
+    "window 20260925~20261103 today=20261104 stockDays=1382 codes=735 days=25 alreadySaved=6 knownSkip=0",
+    "parity MATCH (pages=2 end=warmup range=20261029~20261104)",
+    "run codes=5/734 pages=9 saved=3 warmShort=1 expired=8 noBars=0 trunc=0 err=0 elapsed=0.2m avg=2.0s/code remainingCodes=729 estRemaining=24m"
+  ],
+  "problems": []
+}

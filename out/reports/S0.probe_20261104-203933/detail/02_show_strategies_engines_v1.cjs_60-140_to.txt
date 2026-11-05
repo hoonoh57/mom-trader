@@ -1,0 +1,81 @@
+   60:   }
+   61:   function compute(bars, P) {
+   62:     const N = bars.length, c = bars.map(b => b.c);
+   63:     const mom = new Array(N).fill(null);
+   64:     for (let i = P.MomLen; i < N; i++) { const r = c[i - P.MomLen]; mom[i] = r > 0 ? c[i] / r * 100 : null; }
+   65:     const e1 = ema(c, P.P1), e2 = ema(c, P.P2);
+   66:     const n = c.map((x, i) => (e1[i] - e2[i]) / x * 100);
+   67:     const sig = ema(n, P.P3);
+   68:     const emaL = ema(c, P.EmaLen);
+   69:     const st = supertrend(bars, P.StLen, P.StMult);
+   70:     const amt = bars.map(b => (b.o + b.h + b.l + b.c) / 4 * b.v);
+   71:     const taamt = new Array(N), dayStart = new Array(N);
+   72:     let d = null, cum = 0, ds = 0;
+   73:     for (let i = 0; i < N; i++) {
+   74:       if (bars[i].d !== d) { d = bars[i].d; cum = 0; ds = i; }
+   75:       cum += amt[i]; taamt[i] = cum; dayStart[i] = ds;
+   76:     }
+   77:     const big = new Array(N).fill(false); let win = 0;
+   78:     for (let i = 0; i < N; i++) {
+   79:       let rel = false;
+   80:       if (i >= P.RelWin) rel = amt[i] >= P.RelK * (win / P.RelWin);
+   81:       const abs = amt[i] >= P.BigTh;
+   82:       big[i] = P.BigMode === 'abs' ? abs : P.BigMode === 'rel' ? rel : (abs && rel);
+   83:       win += amt[i]; if (i >= P.RelWin) win -= amt[i - P.RelWin];
+   84:     }
+   85:     const cnt1 = new Array(N), thr = new Array(N), tickOk = new Array(N);
+   86:     let a1 = 0, a5 = 0;
+   87:     for (let i = 0; i < N; i++) {
+   88:       const t = bars[i].t;
+   89:       while (bars[a1].t <= t - 60) a1++;
+   90:       while (bars[a5].t <= t - 300) a5++;
+   91:       cnt1[i] = (i - a1 + 1) * P.TickScope;
+   92:       const avg5 = (i - a5 + 1) * P.TickScope / 5;
+   93:       thr[i] = Math.max(P.TickAbs, avg5 * P.TickK);
+   94:       tickOk[i] = cnt1[i] >= thr[i];
+   95:     }
+   96:     const disp = c.map((x, i) => emaL[i] > 0 ? x / emaL[i] * 100 : null);
+   97:     const safe = new Array(N).fill(false);
+   98:     let s = false, upRun = 0, dnRun = 0;
+   99:     for (let i = 0; i < N; i++) {
+  100:       const m = mom[i];
+  101:       if (m == null) { safe[i] = false; continue; }
+  102:       upRun = m >= P.SafeTh ? upRun + 1 : 0;
+  103:       dnRun = m < P.SafeExitTh ? dnRun + 1 : 0;
+  104:       if (!s && upRun >= P.SafeConfirm) s = true; else if (s && dnRun >= P.SafeConfirm) s = false;
+  105:       safe[i] = s;
+  106:     }
+  107:     return { mom, n, sig, ema: emaL, st: st.line, stDir: st.dir, amt, taamt, dayStart, big, cnt1, thr, tickOk, disp, safe };
+  108:   }
+  109:   function hit(rule, i, ind, b, pos, P) {
+  110:     switch (rule) {
+  111:       case 'hold': return false;
+  112:       case 'immediate': return true;
+  113:       case 'macd_zero': return ind.n[i] < 0;
+  114:       case 'macd_sig': return ind.n[i] < ind.sig[i];
+  115:       case 'supertrend': return ind.stDir[i] === -1;
+  116:       case 'trail': return b.c <= pos.peakC * (1 - P.TrailPct / 100);
+  117:       default: throw new Error('unknown rule ' + rule);
+  118:     }
+  119:   }
+  120:   function simulate(bars, ind, P, ctx) {
+  121:     const N = bars.length, trades = [], marks = [];
+  122:     const rej = { time: 0, count: 0, gap: 0, lim: 0, ema: 0, disp: 0, tick: 0 };
+  123:     const armMode = P.ArmMode === 'cross' ? 'cross' : 'state';
+  124:     const noLoss = Number(P.SafeNoLoss == null ? 1 : P.SafeNoLoss) > 0;
+  125:     const minPct = Number(P.SafeMinPct || 0), gap = Number(P.ReentryGap || 0);
+  126:     let armed = false, pos = null, hiDay = 0, pbDone = false, arms = 0, sigs = 0, lastI = -1, lastExit = -1e9, held = 0;
+  127:     const limMode = ctx.limKind === 'limit' ? P.LimMode : ctx.limKind === 'surge' ? P.SurgeMode : 'off';
+  128:     const closeTrade = (i, px, why) => {
+  129:       const gross = (px / pos.entry - 1) * 100, ret = gross - P.FeePct;
+  130:       trades.push({ inI: pos.idx, inPx: pos.entry, outI: i, outPx: px, why, gross, ret,
+  131:         mfe: (pos.hi / pos.entry - 1) * 100, mae: (pos.lo / pos.entry - 1) * 100, bars: i - pos.idx, reached: pos.reached, held: pos.held });
+  132:       marks.push({ i, k: 'exit', why, ret });
+  133:       pos = null; lastExit = i;
+  134:     };
+  135:     for (let i = ctx.start; i < N; i++) {
+  136:       const b = bars[i];
+  137:       if (b.d !== ctx.date) continue;
+  138:       lastI = i;
+  139:       if (b.h > hiDay) hiDay = b.h;
+  140:       if (hiDay > 0 && (hiDay - b.l) / hiDay * 100 >= P.PbPct) pbDone = true;

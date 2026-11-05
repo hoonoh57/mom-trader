@@ -1,0 +1,50 @@
+{
+ "step": "S0.probe",
+ "version": "probe-1.0",
+ "started": "2026-11-04T12:38:19.206Z",
+ "env": {
+  "node": "v24.19.0",
+  "ps": "5.1.26100.9818",
+  "os": "win32-x64",
+  "report": "report-1.0",
+  "envFile": "found",
+  "secretsMasked": "7"
+ },
+ "checks": [
+  {
+   "name": "selftest: mask secrets/bearer/account, keep prices",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: env loader picks only secret-like keys",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: utf8 hangul roundtrip without BOM",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: size cap and FAIL report with code context",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "selftest: PASS report is compact",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "data": [
+  {
+   "title": "find /EntryStart|_entS|_entE|_sessMax|function prep/ in strategies\\engines hits=6 files=2",
+   "body": "== strategies/engines/v1.cjs\n     7:   const DEFAULTS = { MomLen: 50, SafeTh: 100, SafeExitTh: 100, SafeConfirm: 1, P1: 7, P2: 14, P3: 5,\n     8:     StrongA: 1e9, BigMode: 'abs', BigTh: 5e7, RelWin: 20, RelK: 3, BigNeedUp: 1, BigNeedST: 1,\n     9:     ArmSkip: 1, ArmSameSession: 1, EmaLen: 200, StLen: 14, StMult: 1.5, TickScope: 120, TickK: 1.0, TickAbs: 0,\n    10:     DispMax: 112, DispUntil: 1000, LimPct: 29, SurgePct: 25, LimMode: 'pullback', SurgeMode: 'pullback', PbPct: 5,\n>   11:     EntryStart: 900, EntryEnd: 1520, ExitTime: 1520, SessionStartMax: 905,\n    12:     TargetPct: 5, StopPct: 3, TrailPct: 2,\n    13:     SafeBelow: 'hold', SafeAbove: 'hold', UnsafeBelow: 'macd_sig', UnsafeAbove: 'immediate',\n    14:     FeePct: 0.25, SlipPct: 0, MaxTrades: 10, ArmMode: 'state', SafeNoLoss: 1, SafeMinPct: 0, ReentryGap: 0, Match: '_AL_120t_', Date: '' };\n    15: \n  --\n    21:     if (['abs', 'rel', 'both'].indexOf(P.BigMode) < 0) throw new Error('BigMode invalid: ' + P.BigMode);\n    22:     for (const k of ['MomLen', 'P1', 'P2', 'P3', 'EmaLen', 'StLen', 'RelWin', 'TickScope', 'SafeConfirm'])\n    23:       if (!(Number(P[k]) >= 1)) throw new Error(k + ' must be >= 1');\n    24:   }\n>   25:   function prep(P0) {\n    26:     const P = Object.assign({}, DEFAULTS, P0 || {});\n    27:     validate(P);\n    28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;\n    29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;\n  --\n    24:   }\n    25:   function prep(P0) {\n    26:     const P = Object.assign({}, DEFAULTS, P0 || {});\n    27:     validate(P);\n>   28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;\n    29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;\n    30:     return P;\n    31:   }\n    32:   function ema(src, len) {\n  --\n    25:   function prep(P0) {\n    26:     const P = Object.assign({}, DEFAULTS, P0 || {});\n    27:     validate(P);\n    28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;\n>   29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;\n    30:     return P;\n    31:   }\n    32:   function ema(src, len) {\n    33:     const a = 2 / (len + 1), out = new Array(src.length); let prev = null;\n  --\n   173:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));\n   174:       if (!signal) continue;\n   175:       sigs++;\n   176:       let why = null;\n>  177:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';\n   178:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';\n   179:       else if (i - lastExit <= gap) why = 'gap';\n   180:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';\n   181:       else if (!(b.c > ind.ema[i])) why = 'ema';\n  --\n== strategies/engines/v3.cjs\n   100:       const signal = ind.big[i] && (!P.BigNeedUp || b.c > b.o) && (!P.BigNeedST || (ind.st[i] != null && b.c > ind.st[i]));\n   101:       if (!signal) return;\n   102:       sigs++;\n   103:       let why = null;\n>  104:       if (b.hms < P._entS || b.hms >= P._entE) why = 'time';\n   105:       else if (P.MaxTrades > 0 && trades.length >= P.MaxTrades) why = 'count';\n   106:       else if (i - lastExit <= gap) why = 'gap';\n   107:       else if (limMode === 'block' || (limMode === 'pullback' && !pbDone)) why = 'lim';\n   108:       else if (!(b.c > ind.ema[i])) why = 'ema';\n  --"
+  }
+ ],
+ "errors": [],
+ "notes": [],
+ "verdict": "PASS",
+ "ended": "2026-11-04T12:38:19.225Z"
+}

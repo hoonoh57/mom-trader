@@ -1,0 +1,16 @@
+# pub-2.0 allowlist (setup\pub_allow.txt)
+# dir|name-regex  = directory, recursive (empty regex = all files)
+# path            = single file
+# Hard excludes in 41_pub.ps1 always win: data, logs, node_modules, dist, .git, security, .env*, *.bak*, raw-*.json, key files, > MaxKB
+strategies|\.(json|cjs|js|md)$
+tools|\.(cjs|mjs|js|md|json)$
+research|
+setup|\.(ps1|md|txt|json)$
+ui|
+docs|
+out\charts|
+out\human|
+out\reports|\.(txt|md|csv|json|html|htm|svg|png)$
+PLAN.md
+README.md
+out\FOR_OPUS.txt

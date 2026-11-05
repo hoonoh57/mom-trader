@@ -1,0 +1,230 @@
+    1: ﻿#requires -Version 5.1
+    2: # mom-trader : 키움 REST ka10079 틱차트 다운로드 + 검증
+    3: param(
+    4:   [string[]]$Codes = @('030530'),
+    5:   [string]$Date = '',                       # yyyyMMdd, 비우면 응답의 최신 거래일
+    6:   [ValidateSet('1','3','5','10','30','60','120')][string]$Scope = '120',
+    7:   [ValidateSet('AUTO','KRX','NXT','AL')][string]$Market = 'AUTO',
+    8:   [ValidateSet('AUTO','MOCK','REAL')][string]$Server = 'AUTO',
+    9:   [string]$EnvPath = 'E:\parent\security\.env',
+   10:   [string]$Root = 'E:\parent\projects\rea\projects\mom-trader',
+   11:   [int]$WarmupBars = 200,                   # 대상일 이전 봉 확보 수 (Mom50/강도 워밍업)
+   12:   [int]$MaxPages = 80,
+   13:   [int]$DelayMs = 300,
+   14:   [switch]$SelfTestOnly
+   15: )
+   16: 
+   17: try { chcp.com 65001 > $null } catch { }
+   18: # [16_patch] [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+   19: # [16_patch] $OutputEncoding = [System.Text.Encoding]::UTF8
+   20: 
+   21: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+   22: [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+   23: $ErrorActionPreference = 'Stop'
+   24: $Inv = [Globalization.CultureInfo]::InvariantCulture
+   25: $Log = New-Object System.Collections.Generic.List[string]
+   26: 
+   27: function Say([string]$m, [string]$c = 'Gray') { Write-Host $m -ForegroundColor $c; $Log.Add($m) }
+   28: function Ok([string]$m)   { Say "[성공] $m" 'Green' }
+   29: function Bad([string]$m)  { Say "[실패] $m" 'Red' }
+   30: function Warn([string]$m) { Say "[주의] $m" 'Yellow' }
+   31: function F($d) { ([double]$d).ToString('0.####', $Inv) }
+   32: 
+   33: function To-Num($s) {
+   34:   if ($null -eq $s) { return $null }
+   35:   $t = "$s".Trim().Replace(',', '')
+   36:   if ($t -eq '') { return $null }
+   37:   [double]$d = 0
+   38:   if ([double]::TryParse($t, [Globalization.NumberStyles]::Float, $Inv, [ref]$d)) { return [math]::Abs($d) }
+   39:   return $null
+   40: }
+   41: 
+   42: function Read-DotEnv([string]$Path) {
+   43:   if (-not (Test-Path -LiteralPath $Path)) { throw ".env 파일 없음: $Path" }
+   44:   $map = @{}
+   45:   foreach ($line in [IO.File]::ReadAllLines($Path, [Text.Encoding]::UTF8)) {
+   46:     $t = $line.Trim()
+   47:     if ($t -eq '' -or $t.StartsWith('#')) { continue }
+   48:     $i = $t.IndexOf('=')
+   49:     if ($i -lt 1) { continue }
+   50:     $k = $t.Substring(0, $i).Trim()
+   51:     $v = $t.Substring($i + 1).Trim()
+   52:     if ($v.Length -ge 2 -and (($v[0] -eq '"' -and $v[-1] -eq '"') -or ($v[0] -eq "'" -and $v[-1] -eq "'"))) {
+   53:       $v = $v.Substring(1, $v.Length - 2)
+   54:     }
+   55:     $map[$k] = $v
+   56:   }
+   57:   return $map
+   58: }
+   59: 
+   60: function Get-Header($headers, [string]$name) {
+   61:   if ($null -eq $headers) { return '' }
+   62:   foreach ($k in @($headers.Keys)) {
+   63:     if ($k -eq $name) { $v = $headers[$k]; if ($v -is [string]) { return $v }; return (@($v) -join ',') }
+   64:   }
+   65:   return ''
+   66: }
+   67: 
+   68: function ConvertTo-TickRow($it) {
+   69:   $ts = "$($it.cntr_tm)".Trim()
+   70:   if ($ts.Length -lt 14) { return $null }
+   71:   $o = To-Num $it.open_pric; $h = To-Num $it.high_pric; $l = To-Num $it.low_pric
+   72:   $c = To-Num $it.cur_prc;   $v = To-Num $it.trde_qty
+   73:   if ($null -in @($o, $h, $l, $c, $v)) { return $null }
+   74:   [pscustomobject]@{
+   75:     ts = $ts.Substring(0, 14); date = $ts.Substring(0, 8); time = $ts.Substring(8, 6)
+   76:     open = $o; high = $h; low = $l; close = $c; volume = $v
+   77:     amount = ($o + $h + $l + $c) / 4 * $v
+   78:   }
+   79: }
+   80: 
+   81: function Invoke-Kiwoom([string]$Url, [hashtable]$Headers, [hashtable]$Body) {
+   82:   $bytes = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Compress))
+   83:   for ($attempt = 1; $attempt -le 4; $attempt++) {
+   84:     try {
+   85:       $resp = Invoke-WebRequest -Uri $Url -Method Post -Headers $Headers -Body $bytes `
+   86:               -ContentType 'application/json;charset=UTF-8' -UseBasicParsing -TimeoutSec 20
+   87:       $text = $null
+   88:       if ($resp.RawContentStream) {
+   89:         $ms = New-Object IO.MemoryStream; $resp.RawContentStream.Position = 0; $resp.RawContentStream.CopyTo($ms)
+   90:         $text = [Text.Encoding]::UTF8.GetString($ms.ToArray())
+   91:       } else { $text = $resp.Content }
+   92:       return [pscustomobject]@{ Headers = $resp.Headers; Text = $text; Json = ($text | ConvertFrom-Json) }
+   93:     } catch {
+   94:       $status = 0; $err = $_.Exception.Message
+   95:       $r = $_.Exception.Response
+   96:       if ($r) {
+   97:         try { $status = [int]$r.StatusCode } catch {}
+   98:         try { $sr = New-Object IO.StreamReader($r.GetResponseStream(), [Text.Encoding]::UTF8); $err = $sr.ReadToEnd() } catch {}
+   99:       }
+  100:       if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $err = $_.ErrorDetails.Message }
+  101:       if ($status -eq 429 -and $attempt -lt 4) { Start-Sleep -Milliseconds (1000 * $attempt); continue }
+  102:       throw "HTTP $status : $err"
+  103:     }
+  104:   }
+  105: }
+  106: 
+  107: # ---------- 1. 오프라인 자가검증 ----------
+  108: function Invoke-SelfTest {
+  109:   $fail = 0
+  110:   if ((To-Num '-71200') -ne 71200 -or (To-Num '+1,234') -ne 1234 -or $null -ne (To-Num '')) { $fail++; Bad '자가검증: To-Num' }
+  111:   $tmp = [IO.Path]::GetTempFileName()
+  112:   [IO.File]::WriteAllText($tmp, "# c`nA=1`nB=`"x y`"`nC=`n", (New-Object Text.UTF8Encoding($false)))
+  113:   $e = Read-DotEnv $tmp; Remove-Item $tmp -Force
+  114:   if ($e['A'] -ne '1' -or $e['B'] -ne 'x y' -or $e['C'] -ne '' -or $e.ContainsKey('# c')) { $fail++; Bad '자가검증: Read-DotEnv' }
+  115:   $row = ConvertTo-TickRow ([pscustomobject]@{ cntr_tm='20261102090001'; open_pric='-100'; high_pric='110'; low_pric='90'; cur_prc='+100'; trde_qty='10' })
+  116:   if ($null -eq $row -or $row.amount -ne 1000 -or $row.date -ne '20261102' -or $row.time -ne '090001') { $fail++; Bad '자가검증: ConvertTo-TickRow' }
+  117:   if ((Get-Header @{ 'Cont-Yn' = 'Y' } 'cont-yn') -ne 'Y') { $fail++; Bad '자가검증: Get-Header' }
+  118:   if ($fail -eq 0) { Ok '자가검증 4/4 통과 (오프라인)' }
+  119:   return ($fail -eq 0)
+  120: }
+  121: 
+  122: Say "=== mom-trader 틱 다운로드 (ka10079, ${Scope}틱) ===" 'Cyan'
+  123: if (-not (Invoke-SelfTest)) { exit 1 }
+  124: if ($SelfTestOnly) { exit 0 }
+  125: 
+  126: # ---------- 2. 인증 정보 ----------
+  127: try { $envMap = Read-DotEnv $EnvPath } catch { Bad $_.Exception.Message; exit 1 }
+  128: $useMock = switch ($Server) { 'MOCK' { $true } 'REAL' { $false } default { "$($envMap['KIWOOM_USE_MOCK'])".Trim().ToLower() -eq 'true' } }
+  129: if ($useMock) { $base = 'https://mockapi.kiwoom.com'; $kName = 'KIWOOM_MOCK_APP_KEY'; $sName = 'KIWOOM_MOCK_SECRET_KEY' }
+  130: else          { $base = 'https://api.kiwoom.com';     $kName = 'KIWOOM_REAL_APP_KEY'; $sName = 'KIWOOM_REAL_SECRET_KEY' }
+  131: $appKey = "$($envMap[$kName])"; $secret = "$($envMap[$sName])"
+  132: if (-not $appKey) { Bad "$kName 값이 비어 있음 ($EnvPath)"; exit 1 }
+  133: if (-not $secret) { Bad "$sName 값이 비어 있음 ($EnvPath)"; exit 1 }
+  134: $mkt = if ($Market -ne 'AUTO') { $Market } else { 'AL' }
+  135: Say ("서버: {0} ({1}) / 키: {2} len={3} / 시장: {4}" -f ($(if ($useMock) {'모의'} else {'실전'})), $base, $kName, $appKey.Length, $mkt)
+  136: 
+  137: # ---------- 3. 토큰 ----------
+  138: try {
+  139:   $t = Invoke-Kiwoom "$base/oauth2/token" @{} @{ grant_type = 'client_credentials'; appkey = $appKey; secretkey = $secret }
+  140:   $token = "$($t.Json.token)"
+  141:   if (-not $token) { throw "return_code=$($t.Json.return_code) msg=$($t.Json.return_msg)" }
+  142:   Ok "토큰 발급 (만료: $($t.Json.expires_dt))"
+  143: } catch { Bad "토큰 발급 실패: $($_.Exception.Message)"; exit 1 }
+  144: 
+  145: # ---------- 4. 종목별 다운로드 ----------
+  146: $codeList = @(($Codes -join ',') -split '[,\s]+' | Where-Object { $_ -match '^[0-9A-Z]{6}$' })
+  147: $__raw = @(($Codes -join ',') -split '[,\s;]+' | Where-Object { $_ }); $__bad = @($__raw | Where-Object { $codeList -notcontains $_.Trim() }); if ($__bad.Count -gt 0) { Write-Host ('[제외] 종목코드 형식 불일치: ' + ($__bad -join ', ')) -ForegroundColor Yellow }  # [16_patch]
+  148: if ($codeList.Count -eq 0) { Bad '유효한 6자리 종목코드 없음 (-Codes "030530,184230")'; exit 1 }
+  149: $outDir = Join-Path $Root 'data\ticks'; $logDir = Join-Path $Root 'logs'
+  150: New-Item -ItemType Directory -Force -Path $outDir, $logDir | Out-Null
+  151: $utf8 = New-Object Text.UTF8Encoding($false)
+  152: $failCount = 0
+  153: 
+  154: foreach ($code in $codeList) {
+  155:   Say "--- $code ---" 'Cyan'
+  156:   $stk = switch ($mkt) { 'KRX' { $code } 'NXT' { "${code}_NX" } 'AL' { "${code}_AL" } }
+  157:   $all = New-Object System.Collections.Generic.List[object]
+  158:   $target = $Date; $next = ''; $endReason = ''; $badRows = 0; $prevCount = 0
+  159:   try {
+  160:     for ($page = 1; $page -le $MaxPages; $page++) {
+  161:       $h = @{ 'authorization' = "Bearer $token"; 'api-id' = 'ka10079' }
+  162:       if ($page -gt 1) { $h['cont-yn'] = 'Y'; $h['next-key'] = $next }
+  163:       $r = Invoke-Kiwoom "$base/api/dostk/chart" $h @{ stk_cd = $stk; tic_scope = $Scope; upd_stkpc_tp = '1' }
+  164:       $rc = "$($r.Json.return_code)"
+  165:       if ($rc -ne '0') { throw "ka10079 return_code=$rc msg=$($r.Json.return_msg)" }
+  166:       $chunk = @(); if ($r.Json.stk_tic_chart_qry) { $chunk = @($r.Json.stk_tic_chart_qry) }
+  167:       if ($page -eq 1) {
+  168:         [IO.File]::WriteAllText((Join-Path $logDir "raw-$code-$Scope-p1.json"), $r.Text, $utf8)
+  169:         if ($chunk.Count -gt 0) { Say ("응답 필드: " + ($chunk[0].PSObject.Properties.Name -join ', ')) }
+  170:       }
+  171:       if ($chunk.Count -eq 0) { $endReason = '빈 응답'; break }
+  172:       foreach ($it in $chunk) { $row = ConvertTo-TickRow $it; if ($row) { $all.Add($row) } else { $badRows++ } }
+  173:       if (-not $target) { $target = ($all | ForEach-Object { $_.date } | Sort-Object -Descending | Select-Object -First 1) }
+  174:       $prevCount = @($all | Where-Object { $_.date -lt $target }).Count
+  175:       if ($prevCount -ge $WarmupBars) { $endReason = '워밍업 확보'; break }
+  176:       $cont = Get-Header $r.Headers 'cont-yn'; $next = Get-Header $r.Headers 'next-key'
+  177:       if ($cont -ne 'Y' -or -not $next) { $endReason = "연속조회 끝(cont-yn=$cont)"; break }
+  178:       Start-Sleep -Milliseconds $DelayMs
+  179:     }
+  180:     if (-not $endReason) { $endReason = "MaxPages($MaxPages) 도달" }
+  181:   } catch {
+  182:     Bad "$code 다운로드 실패: $($_.Exception.Message)"
+  183:     if ($Scope -in @('60', '120')) { Warn '공식 명세의 틱범위는 1/3/5/10/30 입니다. -Scope 30 으로 재시도해 보세요.' }
+  184:     if ($mkt -ne 'KRX') { Warn '-Market KRX 로도 재시도해 보세요 (모의서버는 _AL/_NX 미지원 가능).' }
+  185:     $failCount++; continue
+  186:   }
+  187: 
+  188:   # 응답은 최신→과거 순. 같은 초 안의 봉 순서를 보존하려고 정렬 대신 역순으로 뒤집는다.
+  189:   $arr = $all.ToArray(); [Array]::Reverse($arr)
+  190:   $prev = @($arr | Where-Object { $_.date -lt $target })
+  191:   $tgt  = @($arr | Where-Object { $_.date -eq $target })
+  192:   $keep = if ($prev.Count -gt $WarmupBars) { $prev[($prev.Count - $WarmupBars)..($prev.Count - 1)] } else { $prev }
+  193:   $out  = @($keep) + @($tgt)
+  194: 
+  195:   $nonMono = 0; $ohlcBad = 0; $sameTs = 0
+  196:   for ($i = 0; $i -lt $out.Count; $i++) {
+  197:     $b = $out[$i]
+  198:     if ($b.low -gt [math]::Min($b.open, $b.close) -or $b.high -lt [math]::Max($b.open, $b.close) -or $b.low -le 0) { $ohlcBad++ }
+  199:     if ($i -gt 0) { if ($b.ts -lt $out[$i - 1].ts) { $nonMono++ } elseif ($b.ts -eq $out[$i - 1].ts) { $sameTs++ } }
+  200:   }
+  201: 
+  202:   $lines = New-Object System.Collections.Generic.List[string]
+  203:   $lines.Add('ts,date,time,open,high,low,close,volume,bar_amount,is_target')
+  204:   foreach ($b in $out) {
+  205:     $lines.Add(('{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}' -f $b.ts, $b.date, $b.time, (F $b.open), (F $b.high), (F $b.low), (F $b.close), (F $b.volume), (F $b.amount), $(if ($b.date -eq $target) { 1 } else { 0 })))
+  206:   }
+  207:   $csv = Join-Path $outDir ("{0}_{1}_{2}t_{3}.csv" -f $code, $mkt, $Scope, $target)
+  208:   [IO.File]::WriteAllLines($csv, $lines, $utf8)
+  209: 
+  210:   $taamt = ($tgt | Measure-Object -Property amount -Sum).Sum
+  211:   Say ("대상일 {0}: {1}봉 ({2}~{3}), 이전일 워밍업 {4}봉, 종료사유: {5}" -f $target, $tgt.Count,
+  212:        $(if ($tgt.Count) { $tgt[0].time } else { '-' }), $(if ($tgt.Count) { $tgt[-1].time } else { '-' }), $keep.Count, $endReason)
+  213:   Say ("당일 누적거래대금(taamt 계산값): {0:N0}원 / 같은 초 봉 {1}쌍(정보)" -f $taamt, $sameTs)
+  214: 
+  215:   $ok = $true
+  216:   if ($tgt.Count -eq 0) { Bad "대상일 $target 데이터 없음 (보관 기간 초과 가능)"; $ok = $false }
+  217:   if ($badRows -gt 0)   { Bad "파싱 실패 행 $badRows 개 (logs\raw-$code-$Scope-p1.json 확인)"; $ok = $false }
+  218:   if ($nonMono -gt 0)   { Bad "시간 역순 $nonMono 건"; $ok = $false }
+  219:   if ($ohlcBad -gt 0)   { Bad "OHLC 불일치 $ohlcBad 건"; $ok = $false }
+  220:   if ($prev.Count -eq 0) { Warn '이전 거래일 봉이 없음: 대상일 첫 봉이 장 시작인지 보장 못함 (partial)' }
+  221:   elseif ($keep.Count -lt $WarmupBars) { Warn "워밍업 $($keep.Count)/$WarmupBars 봉: Mom50 초반값이 HTS와 다를 수 있음" }
+  222:   if ($ok) { Ok "$code 저장: $csv" } else { $failCount++ }
+  223:   Start-Sleep -Milliseconds $DelayMs
+  224: }
+  225: 
+  226: $logFile = Join-Path $logDir ("fetch-{0}.log" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+  227: [IO.File]::WriteAllLines($logFile, $Log, $utf8)
+  228: if ($failCount -eq 0) { Ok "전체 $($codeList.Count)종목 완료 / 로그: $logFile"; exit 0 }
+  229: Bad "$failCount / $($codeList.Count) 종목 실패 / 로그: $logFile"; exit 1
+  230: 

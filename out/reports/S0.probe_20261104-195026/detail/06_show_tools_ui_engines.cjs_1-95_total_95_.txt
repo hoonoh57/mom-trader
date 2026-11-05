@@ -1,0 +1,95 @@
+    1: 'use strict';
+    2: // mom-trader S1 hash-verified loader (engines-1.0). ASCII only. Never writes files.
+    3: // Frozen modules are required ONLY when every registered hash matches.
+    4: const fs = require('fs');
+    5: const path = require('path');
+    6: const crypto = require('crypto');
+    7: const VERSION = 'engines-1.0';
+    8: const REQUIRED = ['v1', 'risk1', 'v3', 'guard-1.0', 'guard-1.1', 'S000', 'R000'];
+    9: 
+   10: function sha(b) { return crypto.createHash('sha256').update(b).digest('hex'); }
+   11: function readJson(f) { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')); }
+   12: 
+   13: function targets(root) {
+   14:   const SD = path.join(root, 'strategies');
+   15:   const list = [];
+   16:   const manFile = path.join(SD, 'manifest.json');
+   17:   let man;
+   18:   try { man = readJson(manFile); } catch (e) {
+   19:     list.push({ id: 'manifest', kind: 'manifest', file: manFile, want: '', mode: 'bytes', src: '', err: 'manifest read failed: ' + e.message });
+   20:     return list;
+   21:   }
+   22:   for (const id of ['v1', 'risk1', 'v3']) {
+   23:     const e = man.engines && man.engines[id];
+   24:     list.push({ id: id, kind: 'engine', file: e ? path.join(SD, 'engines', e.file) : '', want: e ? String(e.sha256 || '') : '',
+   25:       mode: 'bytes', src: e && e.from ? path.join(root, e.from) : '', err: e ? '' : 'not registered in strategies/manifest.json' });
+   26:   }
+   27:   const guards = [['guard-1.0', 'guard', 'tools/sz-guard.cjs'], ['guard-1.1', 'guard11', 'tools/sz-guard11.cjs']];
+   28:   for (const g of guards) {
+   29:     const mf = path.join(SD, g[1], 'manifest.json');
+   30:     let gm = null, err = '';
+   31:     try { gm = readJson(mf); } catch (e) { err = 'guard manifest read failed: ' + mf + ' :: ' + e.message; }
+   32:     list.push({ id: g[0], kind: 'guard', file: path.join(root, (gm && gm.file) || g[2]), want: gm ? String(gm.sha256 || '') : '',
+   33:       mode: 'bytes', src: '', err: err });
+   34:   }
+   35:   const fz = man.frozen || {};
+   36:   for (const id of Object.keys(fz)) {
+   37:     list.push({ id: id, kind: 'frozen', file: path.join(SD, 'frozen', id + '.json'), want: String(fz[id]), mode: 'params', src: '', err: '' });
+   38:   }
+   39:   return list;
+   40: }
+   41: 
+   42: function verify(root) {
+   43:   root = path.resolve(root);
+   44:   const rows = targets(root).map(function (t) {
+   45:     const r = { id: t.id, kind: t.kind, file: t.file, rel: t.file ? path.relative(root, t.file).split(path.sep).join('/') : '',
+   46:       want: t.want, got: '', ok: false, err: t.err, src: '' };
+   47:     if (!r.err) {
+   48:       try {
+   49:         if (!t.file || !fs.existsSync(t.file)) r.err = 'file missing';
+   50:         else if (t.mode === 'params') {
+   51:           const j = readJson(t.file);
+   52:           if (j.id !== t.id) r.err = 'id mismatch in file: ' + j.id;
+   53:           r.got = sha(JSON.stringify(j.params));
+   54:         } else r.got = sha(fs.readFileSync(t.file));
+   55:       } catch (e) { r.err = e.message; }
+   56:     }
+   57:     if (!r.err && !r.want) r.err = 'no registered hash';
+   58:     r.ok = !r.err && r.got === r.want;
+   59:     if (!r.err && !r.ok) r.err = 'hash mismatch';
+   60:     if (t.src) {
+   61:       try { r.src = fs.existsSync(t.src) ? (sha(fs.readFileSync(t.src)) === r.want ? 'same' : 'differs') : 'missing'; }
+   62:       catch (e) { r.src = 'error'; }
+   63:     }
+   64:     return r;
+   65:   });
+   66:   const ids = rows.map(function (r) { return r.id; });
+   67:   const missing = REQUIRED.filter(function (id) { return ids.indexOf(id) < 0; });
+   68:   const ok = missing.length === 0 && rows.every(function (r) { return r.ok; });
+   69:   return { version: VERSION, root: root, ok: ok, missing: missing, rows: rows };
+   70: }
+   71: 
+   72: function ver(m) { return m && m.VERSION ? String(m.VERSION) : '-'; }
+   73: 
+   74: function load(root) {
+   75:   const v = verify(root);
+   76:   if (!v.ok) {
+   77:     const bad = v.rows.filter(function (r) { return !r.ok; }).map(function (r) { return r.id + '(' + r.err + ')'; })
+   78:       .concat(v.missing.map(function (m) { return m + '(missing)'; }));
+   79:     const e = new Error('hash verification failed, loading blocked: ' + bad.join(', '));
+   80:     e.verify = v;
+   81:     throw e;
+   82:   }
+   83:   const f = {};
+   84:   v.rows.forEach(function (r) { f[r.id] = r.file; });
+   85:   const V1 = require(f.v1), R = require(f.risk1), mk = require(f.v3);
+   86:   if (typeof mk !== 'function') throw new Error('v3 module is not a factory function');
+   87:   const E3 = mk(V1, R);
+   88:   const G10 = require(f['guard-1.0']), G11 = require(f['guard-1.1']);
+   89:   const frozen = {};
+   90:   v.rows.filter(function (r) { return r.kind === 'frozen'; }).forEach(function (r) { frozen[r.id] = readJson(r.file); });
+   91:   return { verify: v, V1: V1, R: R, E3: E3, G10: G10, G11: G11, frozen: frozen,
+   92:     versions: { v1: ver(V1), risk1: ver(R), v3: ver(E3), 'guard-1.0': ver(G10), 'guard-1.1': ver(G11) } };
+   93: }
+   94: 
+   95: module.exports = { VERSION: VERSION, REQUIRED: REQUIRED, verify: verify, load: load, sha: sha, readJson: readJson };

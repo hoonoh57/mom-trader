@@ -1,0 +1,14 @@
+#MT-REPORT v=report-1.0 step=S1.server ver=s1-1.0 verdict=PASS ts=2026-11-04T06:37:47.563Z dur=0.1s
+#DIR E:\parent\projects\rea\projects\mom-trader\out\reports\S1.server_20261104-153747
+#ENV node=v24.19.0 engines=engines-1.0 server=server-1.0 report=report-1.0 ver_v1=- ver_risk1=risk-1.1 ver_v3=v3.0 ver_guard-1.0=guard-1.0 ver_guard-1.1=guard-1.1
+#CHK 21/21 PASS
+#NOTE docs/progress.md updated
+#DATA hash table [id kind file want12 got12 result toolsCopy] lines=7
+v1  engine  strategies/engines/v1.cjs  921bdbc3319c  921bdbc3319c  OK  same
+risk1  engine  strategies/engines/risk1.cjs  b843afa96c92  b843afa96c92  OK  same
+v3  engine  strategies/engines/v3.cjs  9fa7da1b1b10  9fa7da1b1b10  OK  same
+guard-1.0  guard  tools/sz-guard.cjs  19607cabd0a2  19607cabd0a2  OK  -
+guard-1.1  guard  tools/sz-guard11.cjs  73d188febcf9  73d188febcf9  OK  -
+S000  frozen  strategies/frozen/S000.json  3388119b754c  3388119b754c  OK  -
+R000  frozen  strategies/frozen/R000.json  9f3115736d0c  9f3115736d0c  OK  -
+#END

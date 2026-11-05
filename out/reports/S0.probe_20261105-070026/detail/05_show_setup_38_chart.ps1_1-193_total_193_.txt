@@ -1,0 +1,193 @@
+    1: ﻿param([string]$Strategies = 'S000', [int]$MinWarm = 400, [string]$Csv = '', [string]$ExclDates = '20261021,20261028')
+    2: $ErrorActionPreference = 'Continue'
+    3: $Root = 'E:\parent\projects\rea\projects\mom-trader'
+    4: $Out = Join-Path $Root 'out\FOR_OPUS.txt'
+    5: $Src = Join-Path $Root 'tools\ui\s4_causal.cjs'
+    6: $Js = Join-Path $Root 'tools\ui\s4_chart.cjs'
+    7: $U8 = New-Object System.Text.UTF8Encoding($false)
+    8: function Fail([string]$m, [string]$d) {
+    9:   $t = "#MT-REPORT v=report-1.0 step=S4.chart ver=ps-wrapper verdict=FAIL ts=$((Get-Date).ToString('s'))`n#FAIL $m`n$d`n"
+   10:   [System.IO.File]::WriteAllText($Out, $t, $U8); Write-Host "FAIL S4.chart -> $Out"; exit 1
+   11: }
+   12: if (-not (Test-Path $Src)) { Fail 'source missing' $Src }
+   13: if (-not (Test-Path (Join-Path $Root 'tools\sz-render.js'))) { Fail 'sz-render.js missing' '' }
+   14: $t = [System.IO.File]::ReadAllText($Src, $U8) -replace "`r`n", "`n"
+   15: $anchor = "  for (const s of strats) {`n    const P0 = s.params, FEE = P0.FeePct;`n"
+   16: $i = $t.IndexOf($anchor); $j = $t.LastIndexOf($anchor)
+   17: if ($i -lt 0 -or $i -ne $j) { Fail "s4_causal anchor not unique (first=$i last=$j)" '' }
+   18: $ver = "const VER = 'causal-1.0', STEP = 'S4.causal';"
+   19: $head = $t.Substring(0, $i)
+   20: if ([regex]::Matches($head, [regex]::Escape($ver)).Count -ne 1) { Fail 'VER line not found exactly once' '' }
+   21: $head = $head.Replace($ver, "const VER = 'chart-1.0', STEP = 'S4.chart';")
+   22: $part = @'
+   23:   { // ================= S4-3c chart section (chart-1.0) =================
+   24:   // Re-runs S4-3b 'cap' with the same run/mkRow/agg, gates on 382 / -106.50, then draws case charts (sz-render.js + overlay).
+   25:   const SS = strats.find(x => x.id === B.id);
+   26:   if (!ok('baseline in strategies', !!SS, 'strats=' + strats.map(x => x.id).join(','))) return 'FAIL';
+   27:   const P0 = SS.params, FEE = P0.FeePct;
+   28:   const natES = V1.prep(Object.assign({}, P0, { Date: '', TickScope: 120 }))._entS / 100;
+   29:   const capV = VARS.find(v => v.id === 'cap');
+   30:   const adj = r => r.R[K0].adj;
+   31:   const natRows = [], rows = [];
+   32:   for (const it of items) {
+   33:     const nt = run(it, it.bars, it.start, P0).r.trades;
+   34:     if (nt.length) natRows.push(mkRow(it, nt[0], FEE));
+   35:     if (!it.cp) continue;
+   36:     const es = Math.max(natES, capV.es(it.cp.hms));
+   37:     const tr = run(it, it.bars, it.start, Object.assign({}, P0, { EntryStart: es, MaxTrades: 1 })).r.trades;
+   38:     if (!tr.length) continue;
+   39:     const r = mkRow(it, tr[0], FEE);
+   40:     r.es = es; r.late = !!(nt.length && it.bars[nt[0].inI].hms < es * 100);
+   41:     rows.push(r);
+   42:   }
+   43:   const nb = agg(natRows, K0), a0 = agg(rows, K0);
+   44:   ok('repro native first S000 (+87.90 / +96.53)', nb.sum.toFixed(2) === '87.90' && nb.sumA.toFixed(2) === '96.53', 'got ' + nb.sum.toFixed(2) + ' ' + nb.sumA.toFixed(2));
+   45:   if (!ok('repro S4-3b cap S000 (382 / -106.50)', rows.length === 382 && a0.sumA.toFixed(2) === '-106.50', 'got ' + rows.length + ' ' + a0.sumA.toFixed(2))) return 'FAIL';
+   46: 
+   47:   const stopPx = r => r.t.inPx * (1 - P0.StopPct / 100);
+   48:   const CATS = [
+   49:     ['1_Uminus', r => /^U-/.test(r.t.why)], ['2_chase_mfe<0.5', r => r.t.mfe < 0.5], ['3_delay>30', r => r.delay > 30],
+   50:     ['4_late_new', r => r.late], ['5_stop', r => r.t.why === 'stop'], ['5b_stop_gapfill', r => r.t.why === 'stop' && r.t.outPx < stopPx(r) - 1e-6],
+   51:     ['7_Uplus', r => /^U\+/.test(r.t.why)], ['all', r => true]];
+   52:   const totLoss = rows.reduce((s, r) => s + Math.min(0, adj(r)), 0);
+   53:   const cl = ['category              n   win%   sumAdj   avgAdj  avgMfe  avgMae  lossSum  lossShare'];
+   54:   for (const [nm, fn] of CATS) {
+   55:     const sel = rows.filter(fn); if (!sel.length) { cl.push(nm.padEnd(20) + pad(0, 4)); continue; }
+   56:     const w = sel.filter(r => adj(r) > 0).length, sA = sel.reduce((s, r) => s + adj(r), 0), ls = sel.reduce((s, r) => s + Math.min(0, adj(r)), 0);
+   57:     cl.push(nm.padEnd(20) + pad(sel.length, 4) + pad((w / sel.length * 100).toFixed(1), 7) + pad(fx(sA), 9) + pad(fx(sA / sel.length), 9) +
+   58:       pad(f2(avg(sel.map(r => r.t.mfe))), 8) + pad(f2(avg(sel.map(r => r.t.mae))), 8) + pad(fx(ls), 9) + pad((totLoss ? ls / totLoss * 100 : 0).toFixed(0) + '%', 10));
+   59:   }
+   60:   data('S000 cap loss categories (overlapping) totalLoss=' + fx(totLoss), cl);
+   61:   const wm = {}; for (const r of rows) (wm[r.t.why] = wm[r.t.why] || []).push(r);
+   62:   const wl = ['why                  n   win%   sumAdj   avgAdj  avgMfe  avgMae'];
+   63:   for (const k of Object.keys(wm).sort((a, b) => wm[b].length - wm[a].length)) {
+   64:     const sel = wm[k], w = sel.filter(r => adj(r) > 0).length, sA = sel.reduce((s, r) => s + adj(r), 0);
+   65:     wl.push(k.padEnd(18) + pad(sel.length, 5) + pad((w / sel.length * 100).toFixed(1), 7) + pad(fx(sA), 9) + pad(fx(sA / sel.length), 9) + pad(f2(avg(sel.map(r => r.t.mfe))), 8) + pad(f2(avg(sel.map(r => r.t.mae))), 8));
+   66:   }
+   67:   data('S000 cap exit reasons', wl);
+   68: 
+   69:   const used = new Set(), cases = [], kk = r => r.code + '_' + r.date;
+   70:   const take = (cat, list, n) => { let c = 0; for (const r of list) { if (c >= n) break; if (used.has(kk(r))) continue; used.add(kk(r)); cases.push({ cat, r }); c++; } };
+   71:   const byLoss = a => a.slice().sort((x, y) => adj(x) - adj(y));
+   72:   take('1_Uminus', byLoss(rows.filter(r => /^U-/.test(r.t.why) && adj(r) < 0)), 5);
+   73:   take('2_chase', byLoss(rows.filter(r => r.t.mfe < 0.5 && adj(r) < 0)), 5);
+   74:   take('3_delay>30', byLoss(rows.filter(r => r.delay > 30 && adj(r) < 0)), 5);
+   75:   take('4_late_new', byLoss(rows.filter(r => r.late && adj(r) < 0)), 5);
+   76:   const stops = rows.filter(r => r.t.why === 'stop');
+   77:   take('5_stop_gap', byLoss(stops.filter(r => r.t.outPx < stopPx(r) - 1e-6)), 2);
+   78:   take('5_stop', byLoss(stops), 5 - cases.filter(c => c.cat === '5_stop_gap').length);
+   79:   take('6_0011A0', rows.filter(r => r.code === '0011A0' && r.date === '20261102'), 1);
+   80:   const d21 = rows.filter(r => r.date === '20261021');
+   81:   take('6_1021_worst', byLoss(d21), 1); take('6_1021_best', byLoss(d21).reverse(), 1);
+   82:   take('7_ctrl_Uplus', rows.filter(r => /^U\+/.test(r.t.why)).sort((x, y) => adj(y) - adj(x)), 3);
+   83: 
+   84:   const ANCH = "        else if (m.k === 'rej') cross(x, y(D.h[m.i]) - 8, 4, REJ[m.why] || '#fff');\n      });\n";
+   85:   const rbuf = fs.readFileSync(path.join(ROOT, 'tools', 'sz-render.js')), rsrc = rbuf.toString('utf8').replace(/\r\n/g, '\n');
+   86:   const nA = rsrc.split(ANCH).length - 1;
+   87:   if (!ok('sz-render.js overlay anchor unique', nA === 1, 'count=' + nA + ' sha12=' + sha(rbuf).slice(0, 12))) return 'FAIL';
+   88:   const OVL = [
+   89:     "      if (D.ov) {",
+   90:     "        var O = D.ov, vl = function (ii, col, txt, dy) { if (ii == null || ii < v0 || ii >= v1) return; g.strokeStyle = col; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(ii), p.y); g.lineTo(X(ii), p.y + p.h); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '11px sans-serif'; g.textAlign = 'left'; g.fillText(txt, X(ii) + 3, p.y + dy); };",
+   91:     "        vl(O.capI, '#ffffff', 'CAP ' + O.capTxt, 28); vl(O.esI, '#ffdd00', 'ES ' + O.esTxt, 42);",
+   92:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.font = '10px sans-serif'; g.textAlign = 'left'; g.fillText('stop ' + q.px.toFixed(0), X(a) + 2, y(q.px
+   93:     "        g.font = '10px sans-serif'; g.textAlign = 'center';",
+   94:     "        D.marks.forEach(function (m) { if (m.i < v0 || m.i >= v1) return; if (m.k === 'rej' && m.why !== 'time') { g.fillStyle = REJ[m.why] || '#fff'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 15); } else if (m.k === 'exit') { g.fillStyle = '#ffcc66'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 36); } });",
+   95:     "      }"].join('\n') + '\n';
+   96:   const RENDER = rsrc.replace(ANCH, ANCH + OVL);
+   97: 
+   98:   const outDir = path.join(ROOT, 'out', 'charts', 'S4-3c'); fs.mkdirSync(outDir, { recursive: true });
+   99:   const tm = h => { const s = String(h).padStart(6, '0'); return s.slice(0, 2) + ':' + s.slice(2, 4) + ':' + s.slice(4); };
+  100:   const g2 = (x, d) => x == null || !isFinite(x) ? '-' : Number(x).toFixed(d);
+  101:   const firstIdx = (it, hms) => { for (let j = it.start; j < it.bars.length; j++) if (it.bars[j].d === it.date && it.bars[j].hms >= hms) return j; return null; };
+  102:   const STY = '<style>body{background:#111;color:#ddd;font:13px sans-serif;margin:8px}a{color:#6cf}table{border-collapse:collapse;margin:6px 0}td,th{border:1px solid #333;padding:2px 6px;text-align:right}th{background:#222}.up{color:#ff6b6b}.dn{color:#5cc8ff}pre{font:12px monospace}#tip{position:absolute;display:none;pointer-events:none;background:rgba(0,0,0,.88);border:1px solid #555;padding:6px 
+  103:   const HH = 'case cat              code   date     bar   time           O        H        L        C      mom         n       sig      hist        st stDir       ema safe amt_e8 big';
+  104:   const hts = [HH], idxR = [], cc = ['no,cat,code,date,capHms,capPx,es,inHms,inPx,outHms,outPx,why,ret,adj,mfe,mae,delay,chase,capRise,late,file'];
+  105:   let srcInd = '', mis = 0, mis1 = '';
+  106:   cases.forEach((cs, k) => {
+  107:     const r = cs.r, it = r.it, bars = it.bars, Pc = Object.assign({}, P0, { EntryStart: r.es, MaxTrades: 1 });
+  108:     const rr = run(it, bars, it.start, Pc), Pp = V1.prep(Object.assign({}, Pc, { Date: '', TickScope: 120 }));
+  109:     let ind = rr.ind, R1 = rr.r;
+  110:     if (ind) srcInd = 'run().ind';
+  111:     else {
+  112:       srcInd = 'recomputed V1.compute+simulate';
+  113:       ind = V1.compute(bars, Pp);
+  114:       const dayComplete = bars[it.start].hms <= Pp._sessMax;
+  115:       let limKind = null; if (it.dly && isFinite(it.dly.chg)) { if (it.dly.chg >= Pp.LimPct) limKind = 'limit'; else if (it.dly.chg >= Pp.SurgePct) limKind = 'surge'; }
+  116:       R1 = V1.simulate(bars, ind, Pp, { start: it.start, date: it.date, dayComplete, limKind });
+  117:       const m = sameTr(rr.r, R1, 0) || sameCnt(rr.r, R1);
+  118:       if (m) { mis++; if (!mis1) mis1 = it.code + ' ' + it.date + ': ' + m; }
+  119:     }
+  120:     const t = R1.trades[0] || r.t, v0 = Math.max(0, it.start - 300);
+  121:     const A_ = a => Array.from(a).slice(v0);
+  122:     const rd = (a, d) => Array.from(a).slice(v0).map(x => x == null || !isFinite(x) ? null : +Number(x).toFixed(d));
+  123:     const capI = firstIdx(it, it.cp.hms), esI = firstIdx(it, r.es * 100), sp = stopPx(r);
+  124:     const D = {
+  125:       o: A_(bars.map(b => b.o)), h: A_(bars.map(b => b.h)), l: A_(bars.map(b => b.l)), c: A_(bars.map(b => b.c)), hms: A_(bars.map(b => b.hms)),
+  126:       mom: rd(ind.mom, 3), n: rd(ind.n, 5), sig: rd(ind.sig, 5), ema: rd(ind.ema, 1), st: rd(ind.st, 1), stDir: A_(ind.stDir),
+  127:       amt: rd(ind.amt, 0), taamt: rd(ind.taamt, 0), big: A_(ind.big), cnt1: A_(ind.cnt1), thr: rd(ind.thr, 0), tickOk: A_(ind.tickOk),
+  128:       disp: rd(ind.disp, 2), safe: A_(ind.safe),
+  129:       trades: R1.trades.map(x => Object.assign({}, x, { inI: x.inI - v0, outI: x.outI - v0 })),
+  130:       marks: R1.marks.filter(m => m.i >= v0).map(m => Object.assign({}, m, { i: m.i - v0 })),
+  131:       emaLen: Pp.EmaLen, momLen: Pp.MomLen, safeTh: Pp.SafeTh, bigMode: Pp.BigMode, tickK: Pp.TickK,
+  132:       ov: { capI: capI == null ? null : capI - v0, capTxt: tm(it.cp.hms) + ' ' + it.cp.px, esI: esI == null ? null : esI - v0, esTxt: String(r.es),
+  133:         stops: R1.trades.map(x => ({ a: x.inI - v0, b: x.outI - v0, px: x.inPx * (1 - P0.StopPct / 100) })) } };
+  134:     const pg = [HH];
+  135:     const hl = (lab, j) => {
+  136:       if (j == null || j < 0 || j >= bars.length) return;
+  137:       const b = bars[j], hi = (ind.n[j] != null && ind.sig[j] != null) ? ind.n[j] - ind.sig[j] : NaN;
+  138:       const L = pad(k + 1, 4) + ' ' + cs.cat.padEnd(16) + ' ' + it.code.padEnd(6) + ' ' + it.date + ' ' + lab.padEnd(5) + ' ' + tm(b.hms) +
+  139:         pad(b.o, 9) + pad(b.h, 9) + pad(b.l, 9) + pad(b.c, 9) + pad(g2(ind.mom[j], 2), 9) + pad(g2(ind.n[j], 5), 10) + pad(g2(ind.sig[j], 5), 10) +
+  140:         pad(g2(hi, 5), 10) + pad(g2(ind.st[j], 1), 10) + pad(ind.stDir[j] == null ? '-' : ind.stDir[j], 6) + pad(g2(ind.ema[j], 1), 10) +
+  141:         pad(ind.safe[j] ? 1 : 0, 5) + pad(g2(ind.amt[j] / 1e8, 2), 7) + pad(ind.big[j] ? 1 : 0, 4);
+  142:       hts.push(L); pg.push(L);
+  143:     };
+  144:     hl('cap', capI); hl('in-1', t.inI - 1); hl('in', t.inI); hl('out', t.outI);
+  145:     const fn = 'case' + String(k + 1).padStart(2, '0') + '_' + it.code + '_' + it.date + '.html';
+  146:     const info = [['category', cs.cat], ['code date', it.code + ' ' + it.date], ['capture', tm(it.cp.hms) + ' / ' + it.cp.px + ' / ' + f2(r.capAmt) + 'M'], ['EntryStart', r.es],
+  147:       ['entry', tm(bars[t.inI].hms) + ' ' + t.inPx], ['exit', tm(bars[t.outI].hms) + ' ' + g2(t.outPx, 1) + ' ' + t.why], ['ret/adj', fx(t.ret) + ' / ' + fx(adj(r))],
+  148:       ['mfe/mae', fx(t.mfe) + ' / ' + fx(t.mae)], ['stop', sp.toFixed(1)], ['delay', f2(r.delay)], ['chase', fx(r.chase)], ['capRise', fx(r.capRise)],
+  149:       ['rise', fx(r.rise)], ['openGap', fx(r.openGap)], ['prevChg', fx(r.prevChg)], ['late', r.late ? 'Y' : '']];
+  150:     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + (k + 1) + ' ' + cs.cat + ' ' + it.code + ' ' + it.date + '</title>' + STY + '</head><body>' +
+  151:       '<a href="index.html">index</a> &nbsp; <b>#' + (k + 1) + ' ' + cs.cat + '</b>' +
+  152:       '<table><tr>' + info.slice(0, 8).map(x => '<th>' + x[0] + '</th>').join('') + '</tr><tr>' + info.slice(0, 8).map(x => '<td>' + x[1] + '</td>').join('') + '</tr>' +
+  153:       '<tr>' + info.slice(8).map(x => '<th>' + x[0] + '</th>').join('') + '</tr><tr>' + info.slice(8).map(x => '<td>' + x[1] + '</td>').join('') + '</tr></table>' +
+  154:       '<canvas id="cv" style="width:100%;height:80vh;display:block"></canvas><div id="tip"></div><pre>' + pg.join('\n') + '</pre>' +
+  155:       '<script>window.SZDATA=' + JSON.stringify(D) + ';</script><script>' + RENDER + '</script></body></html>';
+  156:     fs.writeFileSync(path.join(outDir, fn), html, 'utf8');
+  157:     idxR.push('<tr><td>' + (k + 1) + '</td><td>' + cs.cat + '</td><td><a href="' + fn + '">' + it.code + '</a></td><td>' + it.date + '</td><td>' + tm(it.cp.hms) + '</td><td>' +
+  158:       tm(bars[t.inI].hms) + '</td><td>' + tm(bars[t.outI].hms) + '</td><td>' + t.why + '</td><td class="' + (adj(r) > 0 ? 'up' : 'dn') + '">' + fx(adj(r)) + '</td><td>' +
+  159:       fx(t.mfe) + '</td><td>' + fx(t.mae) + '</td><td>' + f2(r.delay) + '</td></tr>');
+  160:     cc.push([k + 1, cs.cat, it.code, it.date, it.cp.hms, it.cp.px, r.es, bars[t.inI].hms, t.inPx, bars[t.outI].hms, f4(t.outPx), t.why, f4(t.ret), f4(adj(r)), f4(t.mfe), f4(t.mae), f4(r.delay), f4(r.chase), f4(r.capRise), r.late ? 1 : 0, fn].join(','));
+  161:   });
+  162:   if (srcInd.indexOf('recomputed') === 0) ok('chart recompute = engine run (all cases)', mis === 0, 'mismatch=' + mis + ' ' + mis1);
+  163:   fs.writeFileSync(path.join(outDir, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><title>S4-3c cases</title>' + STY + '</head><body><h3>S4-3c S000 cap (EntryStart=capture, MaxTrades=1) n=' +
+  164:     rows.length + ' adj=' + fx(a0.sumA) + '</h3><pre>' + cl.join('\n') + '\n\n' + wl.join('\n') + '</pre><table><tr><th>#</th><th>cat</th><th>code</th><th>date</th><th>cap</th><th>in</th><th>out</th><th>why</th><th>adj</th><th>mfe</th><th>mae</th><th>delay</th></tr>' +
+  165:     idxR.join('') + '</table></body></html>', 'utf8');
+  166:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+  167:   fs.writeFileSync(path.join(RDIR, 'detail', 'chart_cases.csv'), cc.join('\n') + '\n');
+  168:   sums.push('charts=' + path.join(outDir, 'index.html') + ' cases=' + cases.length + ' ind=' + srcInd + ' render.sha12=' + sha(rbuf).slice(0, 12));
+  169:   data('HTS check bars (cap=capture bar, in-1=bar before entry, in=entry/signal bar, out=exit bar; amt in 1e8 KRW)', hts);
+  170:   }
+  171:   return chk.every(c => c.c) ? 'PASS' : 'FAIL';
+  172: }
+  173: 
+  174: let verdict = 'FAIL', err = null;
+  175: try { verdict = main(); } catch (e) { err = e; verdict = 'FAIL'; }
+  176: report(verdict, err);
+  177: console.log(verdict + ' ' + STEP + ' -> ' + OUTF);
+  178: process.exit(verdict === 'PASS' ? 0 : 1);
+  179: '@
+  180: $code = $head + ($part -replace "`r`n", "`n")
+  181: if (Test-Path $Js) { Copy-Item $Js "$Js.bak38" -Force }
+  182: [System.IO.File]::WriteAllText($Js, $code, $U8)
+  183: $c = & node --check $Js 2>&1 | Out-String
+  184: if ($LASTEXITCODE -ne 0) { Fail 'node --check failed' $c }
+  185: $a = @($Js, $Root, '--strategies', $Strategies, '--Strategies', $Strategies, '--minWarm', "$MinWarm", '--MinWarm', "$MinWarm", '--minwarm', "$MinWarm",
+  186:   '--excl', $ExclDates, '--exclDates', $ExclDates, '--ExclDates', $ExclDates)
+  187: if ($Csv) { $a += @('--csv', $Csv) }
+  188: $t0 = Get-Date
+  189: $o = & node @a 2>&1 | Out-String
+  190: $ec = $LASTEXITCODE
+  191: if (-not (Test-Path $Out) -or (Get-Item $Out).LastWriteTime -lt $t0) { Fail "node exit $ec, report not written" $o }
+  192: Write-Host ($o.Trim().Split("`n")[-1])
+  193: 

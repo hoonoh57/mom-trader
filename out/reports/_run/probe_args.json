@@ -1,0 +1,12 @@
+{
+    "root":  "E:\\parent\\projects\\rea\\projects\\mom-trader",
+    "items":  "none",
+    "show":  "strategies\\engines\\v1.cjs:76-140",
+    "find":  "function |offHigh|HTS check|module.exports",
+    "findIn":  "tools\\ui",
+    "findCtx":  2,
+    "envPath":  "E:\\parent\\security\\.env",
+    "selfTestOnly":  false,
+    "psVersion":  "5.1.26100.9818",
+    "wrapper":  "29_probe.ps1"
+}

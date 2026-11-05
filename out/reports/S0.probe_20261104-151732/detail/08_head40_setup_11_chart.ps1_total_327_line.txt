@@ -1,0 +1,40 @@
+   1: ﻿#requires -Version 5.1
+   2: # mom-trader : 틱 CSV -> 지표/필터 계산 -> 독립 HTML 차트 (영웅문 대조용)
+   3: param(
+   4:   [string]$Root = 'E:\parent\projects\rea\projects\mom-trader',
+   5:   [string]$Match = '_AL_',
+   6:   [int]$MomLen = 50, [double]$SafeTh = 100,
+   7:   [int]$P1 = 7, [int]$P2 = 14, [int]$P3 = 5,
+   8:   [double]$StrongA = 1000000000,
+   9:   [ValidateSet('abs','rel')][string]$BigMode = 'abs',
+  10:   [double]$BigTh = 50000000,
+  11:   [switch]$BigInclusive,
+  12:   [int]$RelWin = 20, [double]$RelK = 3,
+  13:   [int]$ArmSkip = 1,
+  14:   [ValidateSet('ema','sma')][string]$MaType = 'ema', [int]$MaLen = 200,
+  15:   [int]$StLen = 14, [double]$StMult = 1.5, [ValidateSet('rma','sma')][string]$StAtr = 'rma',
+  16:   [double]$TickAbs = 0, [double]$TickK = 1.0,
+  17:   [ValidateSet('off','block','pullback')][string]$LimMode = 'pullback',
+  18:   [double]$LimPct = 29, [double]$PbPct = 5,
+  19:   [double]$DispMax = 108, [string]$DispUntil = '1000',
+  20:   [switch]$NoEmaFilter, [switch]$NoTickFilter, [switch]$NoDispFilter,
+  21:   [string]$OpenMults = '1.03,1.097,1.15',
+  22:   [switch]$NoOpen
+  23: )
+  24: if ('한글'.Length -ne 2) { Write-Host 'ENCODING ERROR: save this .ps1 as UTF-8 with BOM' -ForegroundColor Red; exit 1 }
+  25: $ErrorActionPreference = 'Stop'
+  26: function Ok([string]$m)  { Write-Host "[성공] $m" -ForegroundColor Green }
+  27: function Bad([string]$m) { Write-Host "[실패] $m" -ForegroundColor Red }
+  28: if ($DispUntil -ne 'all' -and $DispUntil -notmatch '^\d{4}$') { Bad "-DispUntil 은 HHMM 또는 all (입력: $DispUntil)"; exit 1 }
+  29: 
+  30: $tickDir = Join-Path $Root 'data\ticks'; $dailyDir = Join-Path $Root 'data\daily'
+  31: $outDir = Join-Path $Root 'data\chart'; $toolDir = Join-Path $Root 'tools'
+  32: New-Item -ItemType Directory -Force -Path $outDir, $toolDir | Out-Null
+  33: if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Bad 'node 를 찾을 수 없음'; exit 1 }
+  34: 
+  35: $js = @'
+  36: import fs from 'node:fs';
+  37: import path from 'node:path';
+  38: 
+  39: const A = Object.fromEntries(process.argv.slice(2).map(s => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; }));
+  40: const num = k => { const v = Number(A[k]); if (!Number.isFinite(v)) throw new Error('bad param ' + k + '=' + A[k]); return v; };

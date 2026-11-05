@@ -1,0 +1,43 @@
+{
+  "created": "2026-11-02T19:29:48.212Z",
+  "baseline": "S000",
+  "engines": {
+    "v1": {
+      "file": "v1.cjs",
+      "sha256": "921bdbc3319c58d61976a9275c972fcaf28dbee9c141b61a8aa3261564553027",
+      "from": "tools/sz-engine.cjs"
+    },
+    "risk1": {
+      "file": "risk1.cjs",
+      "sha256": "b843afa96c926358f9d491d7b27a4212d515a216cf297deef2bac8cbbceef925",
+      "from": "tools/sz-risk.cjs",
+      "registered": "2026-11-03T01:45:46.501Z",
+      "history": []
+    },
+    "v3": {
+      "file": "v3.cjs",
+      "sha256": "9fa7da1b1b105582bcd7788b299db080db8c843ee6e5404d5b924f2489dbb057",
+      "from": "tools/sz-engine3.cjs",
+      "registered": "2026-11-03T01:45:46.505Z",
+      "history": []
+    }
+  },
+  "frozen": {
+    "S000": "3388119b754c14e14c2a7f2fd63593dd7b10c51322436e9d95aa5858e1492cbe",
+    "R000": "9f3115736d0c5751ee05d95c24b2784fc5bc68ff119ca288f51a3ec38b457106"
+  },
+  "ref": {
+    "dataset": "5cd608c132",
+    "files": {
+      "030530_AL_120t_20261102.csv:09bb6c0846231a47:d541c56d082d": {
+        "n": 9,
+        "sum": 6.8827433475109965
+      },
+      "184230_AL_120t_20261102.csv:1fad4422fc52c18c:10004b164ab9": {
+        "n": 5,
+        "sum": 9.743178851093177
+      }
+    }
+  },
+  "seeded": true
+}

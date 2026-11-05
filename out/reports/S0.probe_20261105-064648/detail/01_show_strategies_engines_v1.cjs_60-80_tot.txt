@@ -1,0 +1,21 @@
+   60:   }
+   61:   function compute(bars, P) {
+   62:     const N = bars.length, c = bars.map(b => b.c);
+   63:     const mom = new Array(N).fill(null);
+   64:     for (let i = P.MomLen; i < N; i++) { const r = c[i - P.MomLen]; mom[i] = r > 0 ? c[i] / r * 100 : null; }
+   65:     const e1 = ema(c, P.P1), e2 = ema(c, P.P2);
+   66:     const n = c.map((x, i) => (e1[i] - e2[i]) / x * 100);
+   67:     const sig = ema(n, P.P3);
+   68:     const emaL = ema(c, P.EmaLen);
+   69:     const st = supertrend(bars, P.StLen, P.StMult);
+   70:     const amt = bars.map(b => (b.o + b.h + b.l + b.c) / 4 * b.v);
+   71:     const taamt = new Array(N), dayStart = new Array(N);
+   72:     let d = null, cum = 0, ds = 0;
+   73:     for (let i = 0; i < N; i++) {
+   74:       if (bars[i].d !== d) { d = bars[i].d; cum = 0; ds = i; }
+   75:       cum += amt[i]; taamt[i] = cum; dayStart[i] = ds;
+   76:     }
+   77:     const big = new Array(N).fill(false); let win = 0;
+   78:     for (let i = 0; i < N; i++) {
+   79:       let rel = false;
+   80:       if (i >= P.RelWin) rel = amt[i] >= P.RelK * (win / P.RelWin);

@@ -1,0 +1,60 @@
+    1: ﻿param([string]$Strategies = 'S000', [int]$MinWarm = 400, [string]$Csv = '', [string]$ExclDates = '20261021,20261028')
+    2: $ErrorActionPreference = 'Continue'
+    3: $Root = 'E:\parent\projects\rea\projects\mom-trader'
+    4: $Out = Join-Path $Root 'out\FOR_OPUS.txt'
+    5: $Js = Join-Path $Root 'tools\ui\s4_causal.cjs'
+    6: $U8 = New-Object System.Text.UTF8Encoding($false)
+    7: function Fail([string]$m, [string]$d) {
+    8:   $t = "#MT-REPORT v=report-1.0 step=S4.causal ver=ps-wrapper verdict=FAIL ts=$((Get-Date).ToString('s'))`n#FAIL $m`n$d`n"
+    9:   [System.IO.File]::WriteAllText($Out, $t, $U8); Write-Host "FAIL S4.causal -> $Out"; exit 1
+   10: }
+   11: $code = @'
+   12: 'use strict';
+   13: // s4_causal.cjs (causal-1.0) - S4-3b first entry AFTER capture only. Read-only on engines and data.
+   14: // Engine facts (v1.cjs 25-31, 177): _entS = EntryStart*100 compared with bar hms (HHMMSS); 'time' reject = continue.
+   15: // Per stock-day: EntryStart = max(native, capture minute [cap] or capture minute + 1 [next]), MaxTrades = 1.
+   16: // Indicators/arming before capture are computed exactly as live. Overlays (target/BE) copied from entryq-1.0.
+   17: const fs = require('fs'), path = require('path'), crypto = require('crypto');
+   18: const VER = 'causal-1.0', STEP = 'S4.causal';
+   19: const ROOT = path.resolve(process.argv[2] || '.');
+   20: const A = k => { const i = process.argv.indexOf('--' + k); return i > 2 && i + 1 < process.argv.length ? process.argv[i + 1] : ''; };
+   21: const T0 = Date.now(), D0 = new Date();
+   22: const p2 = n => String(n).padStart(2, '0');
+   23: const LSTAMP = D0.getFullYear() + p2(D0.getMonth() + 1) + p2(D0.getDate()) + '-' + p2(D0.getHours()) + p2(D0.getMinutes()) + p2(D0.getSeconds());
+   24: const OUTF = path.join(ROOT, 'out', 'FOR_OPUS.txt');
+   25: const RDIR = path.join(ROOT, 'out', 'reports', STEP + '_' + LSTAMP);
+   26: const chk = [], sums = [], datas = [];
+   27: let engVer = '-';
+   28: const ok = (n, c, d) => { chk.push({ n, c: !!c, d: d == null ? '' : String(d) }); return !!c; };
+   29: const data = (name, lines) => datas.push({ name, lines });
+   30: const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+   31: const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+   32: const list = s => String(s == null ? '' : s).split(',').map(x => x.trim()).filter(Boolean);
+   33: const fx = x => isFinite(x) ? (x > 0 ? '+' : '') + Number(x).toFixed(2) : '-';
+   34: const f2 = x => isFinite(x) ? Number(x).toFixed(2) : '-';
+   35: const f4 = x => isFinite(x) ? Number(x).toFixed(4) : '';
+   36: const pad = (s, n) => String(s).padStart(n);
+   37: const avg = arr => { const v = arr.filter(x => isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN; };
+   38: 
+   39: function report(verdict, err) {
+   40:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+   41:   const L = [], pass = chk.filter(c => c.c).length;
+   42:   L.push('#MT-REPORT v=report-1.0 step=' + STEP + ' ver=' + VER + ' verdict=' + verdict + ' ts=' + new Date().toISOString() + ' dur=' + ((Date.now() - T0) / 1000).toFixed(1) + 's');
+   43:   L.push('#DIR ' + RDIR);
+   44:   L.push('#ENV node=' + process.version + ' os=' + process.platform + '-' + process.arch + ' engines=' + engVer);
+   45:   L.push('#CHK ' + pass + '/' + chk.length + ' ' + (pass === chk.length && !err ? 'PASS' : 'FAIL'));
+   46:   for (const c of chk) if (!c.c) L.push('#FAIL ' + c.n + ' :: ' + c.d);
+   47:   if (err) {
+   48:     L.push('#ERR ' + String((err && err.message) || err));
+   49:     for (const s of String((err && err.stack) || '').split('\n').slice(1, 7)) L.push('#AT ' + s.trim());
+   50:   }
+   51:   for (const s of sums) L.push('#SUM ' + s);
+   52:   for (const d of datas) { L.push('#DATA ' + d.name + ' lines=' + d.lines.length); for (const x of d.lines) L.push(x); L.push('#END'); }
+   53:   let txt = L.join('\n') + '\n';
+   54:   if (Buffer.byteLength(txt) > 200 * 1024) txt = txt.slice(0, 200 * 1024) + '\n#TRUNC 200KB\n';
+   55:   fs.mkdirSync(path.dirname(OUTF), { recursive: true });
+   56:   fs.writeFileSync(OUTF, txt);
+   57:   fs.writeFileSync(path.join(RDIR, 'FOR_OPUS.txt'), txt);
+   58: }
+   59: 
+   60: // ---- copied from s4_entryq.cjs ----

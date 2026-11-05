@@ -1,0 +1,75 @@
+    1: (function (root, factory) {
+    2:   if (typeof module === 'object' && module.exports) module.exports = factory();
+    3:   else root.SZ = factory();
+    4: })(typeof self !== 'undefined' ? self : this, function () {
+    5:   'use strict';
+    6:   const RULES = ['hold', 'immediate', 'macd_zero', 'macd_sig', 'supertrend', 'trail'];
+    7:   const DEFAULTS = { MomLen: 50, SafeTh: 100, SafeExitTh: 100, SafeConfirm: 1, P1: 7, P2: 14, P3: 5,
+    8:     StrongA: 1e9, BigMode: 'abs', BigTh: 5e7, RelWin: 20, RelK: 3, BigNeedUp: 1, BigNeedST: 1,
+    9:     ArmSkip: 1, ArmSameSession: 1, EmaLen: 200, StLen: 14, StMult: 1.5, TickScope: 120, TickK: 1.0, TickAbs: 0,
+   10:     DispMax: 112, DispUntil: 1000, LimPct: 29, SurgePct: 25, LimMode: 'pullback', SurgeMode: 'pullback', PbPct: 5,
+   11:     EntryStart: 900, EntryEnd: 1520, ExitTime: 1520, SessionStartMax: 905,
+   12:     TargetPct: 5, StopPct: 3, TrailPct: 2,
+   13:     SafeBelow: 'hold', SafeAbove: 'hold', UnsafeBelow: 'macd_sig', UnsafeAbove: 'immediate',
+   14:     FeePct: 0.25, SlipPct: 0, MaxTrades: 10, ArmMode: 'state', SafeNoLoss: 1, SafeMinPct: 0, ReentryGap: 0, Match: '_AL_120t_', Date: '' };
+   15: 
+   16:   function validate(P) {
+   17:     for (const k of ['SafeBelow', 'SafeAbove', 'UnsafeBelow', 'UnsafeAbove'])
+   18:       if (RULES.indexOf(P[k]) < 0) throw new Error(k + ' invalid: ' + P[k] + ' (use ' + RULES.join('/') + ')');
+   19:     for (const k of ['LimMode', 'SurgeMode'])
+   20:       if (['off', 'block', 'pullback'].indexOf(P[k]) < 0) throw new Error(k + ' invalid: ' + P[k]);
+   21:     if (['abs', 'rel', 'both'].indexOf(P.BigMode) < 0) throw new Error('BigMode invalid: ' + P.BigMode);
+   22:     for (const k of ['MomLen', 'P1', 'P2', 'P3', 'EmaLen', 'StLen', 'RelWin', 'TickScope', 'SafeConfirm'])
+   23:       if (!(Number(P[k]) >= 1)) throw new Error(k + ' must be >= 1');
+   24:   }
+   25:   function prep(P0) {
+   26:     const P = Object.assign({}, DEFAULTS, P0 || {});
+   27:     validate(P);
+   28:     P._entS = P.EntryStart * 100; P._entE = P.EntryEnd * 100; P._exitT = P.ExitTime * 100;
+   29:     P._dispU = P.DispUntil * 100; P._sessMax = P.SessionStartMax * 100;
+   30:     return P;
+   31:   }
+   32:   function ema(src, len) {
+   33:     const a = 2 / (len + 1), out = new Array(src.length); let prev = null;
+   34:     for (let i = 0; i < src.length; i++) {
+   35:       const x = src[i];
+   36:       if (x == null || !isFinite(x)) { out[i] = prev; continue; }
+   37:       prev = prev == null ? x : prev + a * (x - prev); out[i] = prev;
+   38:     }
+   39:     return out;
+   40:   }
+   41:   function supertrend(bars, period, mult) {
+   42:     const n = bars.length, line = new Array(n).fill(null), dir = new Array(n).fill(0);
+   43:     let atr = null, trSum = 0, fu = null, fl = null, d = 1;
+   44:     for (let i = 0; i < n; i++) {
+   45:       const b = bars[i], pc = i > 0 ? bars[i - 1].c : b.c;
+   46:       const tr = Math.max(b.h - b.l, Math.abs(b.h - pc), Math.abs(b.l - pc));
+   47:       if (i < period) { trSum += tr; if (i < period - 1) continue; atr = trSum / period; }
+   48:       else atr = (atr * (period - 1) + tr) / period;
+   49:       const hl2 = (b.h + b.l) / 2, bu = hl2 + mult * atr, bl = hl2 - mult * atr;
+   50:       if (fu == null) { fu = bu; fl = bl; d = b.c >= hl2 ? 1 : -1; }
+   51:       else {
+   52:         const pcl = bars[i - 1].c;
+   53:         fu = (bu < fu || pcl > fu) ? bu : fu;
+   54:         fl = (bl > fl || pcl < fl) ? bl : fl;
+   55:         if (d === 1 && b.c < fl) d = -1; else if (d === -1 && b.c > fu) d = 1;
+   56:       }
+   57:       line[i] = d === 1 ? fl : fu; dir[i] = d;
+   58:     }
+   59:     return { line, dir };
+   60:   }
+   61:   function compute(bars, P) {
+   62:     const N = bars.length, c = bars.map(b => b.c);
+   63:     const mom = new Array(N).fill(null);
+   64:     for (let i = P.MomLen; i < N; i++) { const r = c[i - P.MomLen]; mom[i] = r > 0 ? c[i] / r * 100 : null; }
+   65:     const e1 = ema(c, P.P1), e2 = ema(c, P.P2);
+   66:     const n = c.map((x, i) => (e1[i] - e2[i]) / x * 100);
+   67:     const sig = ema(n, P.P3);
+   68:     const emaL = ema(c, P.EmaLen);
+   69:     const st = supertrend(bars, P.StLen, P.StMult);
+   70:     const amt = bars.map(b => (b.o + b.h + b.l + b.c) / 4 * b.v);
+   71:     const taamt = new Array(N), dayStart = new Array(N);
+   72:     let d = null, cum = 0, ds = 0;
+   73:     for (let i = 0; i < N; i++) {
+   74:       if (bars[i].d !== d) { d = bars[i].d; cum = 0; ds = i; }
+   75:       cum += amt[i]; taamt[i] = cum; dayStart[i] = ds;

@@ -1,0 +1,135 @@
+{
+ "step": "S1.server",
+ "version": "s1-1.0",
+ "started": "2026-11-04T06:37:47.563Z",
+ "env": {
+  "node": "v24.19.0",
+  "engines": "engines-1.0",
+  "server": "server-1.0",
+  "report": "report-1.0",
+  "ver_v1": "-",
+  "ver_risk1": "risk-1.1",
+  "ver_v3": "v3.0",
+  "ver_guard-1.0": "guard-1.0",
+  "ver_guard-1.1": "guard-1.1"
+ },
+ "checks": [
+  {
+   "name": "required targets present (7)",
+   "ok": true,
+   "detail": "missing: "
+  },
+  {
+   "name": "hash v1 (strategies/engines/v1.cjs)",
+   "ok": true,
+   "detail": " got 921bdbc3319c want 921bdbc3319c"
+  },
+  {
+   "name": "hash risk1 (strategies/engines/risk1.cjs)",
+   "ok": true,
+   "detail": " got b843afa96c92 want b843afa96c92"
+  },
+  {
+   "name": "hash v3 (strategies/engines/v3.cjs)",
+   "ok": true,
+   "detail": " got 9fa7da1b1b10 want 9fa7da1b1b10"
+  },
+  {
+   "name": "hash guard-1.0 (tools/sz-guard.cjs)",
+   "ok": true,
+   "detail": " got 19607cabd0a2 want 19607cabd0a2"
+  },
+  {
+   "name": "hash guard-1.1 (tools/sz-guard11.cjs)",
+   "ok": true,
+   "detail": " got 73d188febcf9 want 73d188febcf9"
+  },
+  {
+   "name": "hash S000 (strategies/frozen/S000.json)",
+   "ok": true,
+   "detail": " got 3388119b754c want 3388119b754c"
+  },
+  {
+   "name": "hash R000 (strategies/frozen/R000.json)",
+   "ok": true,
+   "detail": " got 9f3115736d0c want 9f3115736d0c"
+  },
+  {
+   "name": "v1.simulate is function",
+   "ok": true,
+   "detail": "function"
+  },
+  {
+   "name": "v3 assembled (simulate, runPortfolio)",
+   "ok": true,
+   "detail": "keys: VERSION,hit,createSim,simulate,runPortfolio"
+  },
+  {
+   "name": "frozen S000/R000 loaded with params",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "temp copy verifies clean",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1 byte changed in v1 -> rejected (only v1)",
+   "ok": true,
+   "detail": "v1:hash mismatch"
+  },
+  {
+   "name": "load() refuses tampered root",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "S000 reformatted (same params) still accepted",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "S000 param MomLen changed -> rejected",
+   "ok": true,
+   "detail": "S000:hash mismatch"
+  },
+  {
+   "name": "guard-1.1 file missing -> rejected",
+   "ok": true,
+   "detail": "guard-1.1:file missing"
+  },
+  {
+   "name": "GET /api/status -> 200 ok",
+   "ok": true,
+   "detail": "status 200 body {\"server\":\"server-1.0\",\"engines\":\"engines-1.0\",\"node\":\"v24.19.0\",\"root\":\"E:\\\\parent\\\\projects\\\\rea\\\\projects\\\\mom-trader\",\"time\":\"2026-11-04T06:37:47.627Z\",\"ok\":true,\"blocked\":false,\"passed\":7,\"total\":7,\"failed\":0,\"missing\":[],\"rows\":[{\"id\":\"v1\",\"kind\":\"engine\",\"file\":\"strategies/engines/v1.cjs\",\"want\":\"921bdbc3319c\",\"got\":\"921bdbc3319c\",\"ok\":true,\"err\":\"\",\"src\":\"same\"},{\"id\":\"risk1\",\"kind\":\"engin"
+  },
+  {
+   "name": "GET / -> index.html with 5 tabs",
+   "ok": true,
+   "detail": "status 200 missing "
+  },
+  {
+   "name": "path traversal blocked",
+   "ok": true,
+   "detail": "status 403"
+  },
+  {
+   "name": "unknown file -> 404",
+   "ok": true,
+   "detail": "status 404"
+  }
+ ],
+ "data": [
+  {
+   "title": "hash table [id kind file want12 got12 result toolsCopy]",
+   "body": "v1  engine  strategies/engines/v1.cjs  921bdbc3319c  921bdbc3319c  OK  same\nrisk1  engine  strategies/engines/risk1.cjs  b843afa96c92  b843afa96c92  OK  same\nv3  engine  strategies/engines/v3.cjs  9fa7da1b1b10  9fa7da1b1b10  OK  same\nguard-1.0  guard  tools/sz-guard.cjs  19607cabd0a2  19607cabd0a2  OK  -\nguard-1.1  guard  tools/sz-guard11.cjs  73d188febcf9  73d188febcf9  OK  -\nS000  frozen  strategies/frozen/S000.json  3388119b754c  3388119b754c  OK  -\nR000  frozen  strategies/frozen/R000.json  9f3115736d0c  9f3115736d0c  OK  -"
+  }
+ ],
+ "errors": [],
+ "notes": [
+  "docs/progress.md updated"
+ ],
+ "verdict": "PASS",
+ "ended": "2026-11-04T06:37:47.636Z"
+}

@@ -1,0 +1,115 @@
+{
+  "checks": [
+    {
+      "name": "unit toNum",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit readDotEnv",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit tickRow",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fmtNet 0.####",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fmtNet 0.00",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit fmtG",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit buildTick order/warmup/flags",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "unit buildDaily sort/unique/chg",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "roundtrip tick 0011A0_AL_120t_20261102.csv",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "roundtrip daily 0011A0.csv",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "token",
+      "ok": true,
+      "info": ""
+    },
+    {
+      "name": "tick parity 0011A0_AL_120t_20261102.csv",
+      "ok": true,
+      "info": "MATCH"
+    },
+    {
+      "name": "daily parity 0011A0.csv",
+      "ok": true,
+      "info": "MATCH"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "verify_ticks",
+      "rows": [
+        "tick 0011A0_AL_120t_20261102.csv MATCH warm=800/800 tgt=191/191 pages=2 end=warmup sha=b87af4ff28be/b87af4ff28be",
+        "tick 030530_AL_120t_20261102.csv MATCH warm=800/800 tgt=1250/1250 pages=4 end=warmup sha=09bb6c084623/09bb6c084623",
+        "tick 030530_KRX_120t_20261102.csv MATCH warm=200/200 tgt=1250/1250 pages=4 end=warmup sha=b21071f82d88/b21071f82d88",
+        "tick 067570_AL_120t_20261102.csv DIFF warm=79/74 tgt=5/5 pages=1 end=cont_end(N) sha=3c75e60df3dd/18865e0a15e0 firstDiff=L2",
+        "   old: 20261002090003,20261002,090003,1650,1650,1615,1635,2026,3317575,0",
+        "   new: 20261006090030,20261006,090030,1682,1682,1630,1638,6250,10362500,0",
+        "tick 184230_AL_120t_20261102.csv DIFF warm=197/193 tgt=834/834 pages=3 end=cont_end(N) sha=1fad4422fc52/5124c9eb30b6 firstDiff=L2",
+        "   old: 20261002090011,20261002,090011,2020,2070,2010,2070,12117,24748972.5,0",
+        "   new: 20261006090239,20261006,090239,2340,2410,2260,2410,56388,132793740,0",
+        "tick 184230_KRX_120t_20261102.csv DIFF warm=197/193 tgt=834/834 pages=3 end=cont_end(N) sha=1fad4422fc52/5124c9eb30b6 firstDiff=L2",
+        "   old: 20261002090011,20261002,090011,2020,2070,2010,2070,12117,24748972.5,0",
+        "   new: 20261006090239,20261006,090239,2340,2410,2260,2410,56388,132793740,0",
+        "tick 225530_AL_120t_20261102.csv MATCH warm=800/800 tgt=17/17 pages=1 end=warmup sha=977d27901246/977d27901246",
+        "tick 232680_AL_120t_20261102.csv MATCH warm=800/800 tgt=765/765 pages=3 end=warmup sha=e3def96ed1b6/e3def96ed1b6",
+        "tick 263860_AL_120t_20261102.csv MATCH warm=800/800 tgt=289/289 pages=3 end=warmup sha=55c4e7cdda18/55c4e7cdda18",
+        "tick 377450_AL_120t_20261102.csv DIFF warm=77/73 tgt=3/3 pages=1 end=cont_end(N) sha=bfc318e31339/426097f495f9 firstDiff=L2",
+        "   old: 20261002090016,20261002,090016,14380,14380,14070,14290,2114,30187920,0",
+        "   new: 20261006090100,20261006,090100,14200,14880,14150,14440,3386,48817655,0",
+        "tick match 6/10 (primary=0011A0_AL_120t_20261102.csv, others are reference only)"
+      ]
+    },
+    {
+      "name": "verify_daily",
+      "rows": [
+        "daily 0011A0.csv MATCH base=20261102 rows=161/161 sha=17f7ba0806b7/17f7ba0806b7",
+        "daily 030530.csv MATCH base=20261102 rows=600/600 sha=d541c56d082d/d541c56d082d",
+        "daily 067570.csv MATCH base=20261102 rows=600/600 sha=5ef755d4bce0/5ef755d4bce0",
+        "daily 184230.csv MATCH base=20261102 rows=600/600 sha=10004b164ab9/10004b164ab9",
+        "daily 225530.csv MATCH base=20261102 rows=600/600 sha=83c642484c3b/83c642484c3b",
+        "daily 232680.csv MATCH base=20261102 rows=600/600 sha=54efc3770968/54efc3770968",
+        "daily 263860.csv MATCH base=20261102 rows=600/600 sha=9ef70a8c2038/9ef70a8c2038",
+        "daily 377450.csv MATCH base=20261102 rows=600/600 sha=44b2f832d5fa/44b2f832d5fa",
+        "daily match 8/8 (primary=0011A0.csv)"
+      ]
+    }
+  ],
+  "errs": [],
+  "summary": [
+    "roundtrip ticks 10/10, daily 8/8",
+    "tick parity 6/10",
+    "daily parity 8/8"
+  ]
+}

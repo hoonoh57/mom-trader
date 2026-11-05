@@ -1,0 +1,171 @@
+  260:   for (const s of strats) {
+  261:     const x = run(a0, a0.bars, a0.start, s.params).r, y = run(b0, b0.bars, b0.start, s.params).r;
+  262:     const m = sameTr(x, y, 0) || sameCnt(x, y);
+  263:     ok('rest pipeline = old pipeline ' + s.id, !m, m);
+  264:   }
+  265:   if (chk.some(c => !c.c)) return 'FAIL';
+  266: 
+  267:   const capF = findCapCsv(); let cap = new Map();
+  268:   if (!ok('capture csv found', !!capF, 'pass -Csv')) return 'FAIL';
+  269:   { const c = loadCap(capF); cap = c.m; sums.push('capture csv=' + capF + ' rows=' + c.rows + ' bad=' + c.bad + ' stockDays=' + cap.size); }
+  270: 
+  271:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+  272:   const items = []; let excl = 0;
+  273:   for (const f of files) { let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; continue; } if (it.start >= MINW) items.push(it); }
+  274:   items.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.code < b.code ? -1 : 1));
+  275:   if (!ok('eligible stock-days >= 1', items.length > 0, 'eligible=' + items.length)) return 'FAIL';
+  276:   const dates = [...new Set(items.map(x => x.date))].sort(), HA = new Set(dates.slice(0, Math.ceil(dates.length / 2)));
+  277:   for (const it of items) { it.cD = dayClose(restD, it.code, it.date); it.cp = cap.get(it.code + '|' + it.date) || null; }
+  278:   const capHist = {}; for (const it of items) if (it.cp) { const k = String(it.cp.hms); capHist[k] = (capHist[k] || 0) + 1; }
+  279:   sums.push('eligible=' + items.length + ' withCapture=' + items.filter(x => x.cp).length + ' capSec!=0:' + items.filter(x => x.cp && x.cp.hms % 100).length +
+  280:     ' dates=' + dates.length + ' A=' + dates[0] + '~' + [...HA].pop() + ' excl=' + [...EXCL].join('/'));
+  281:   sums.push('capture hms histogram (top 8): ' + Object.entries(capHist).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0] + ':' + e[1]).join(' '));
+  282: 
+  283:   const tgtPx = (entry, T) => { const raw = entry * (1 + T / 100), ts = TS(raw); return Math.ceil(raw / ts - 1e-9) * ts; };
+  284:   const adjRet = (it, t) => {
+  285:     const outH = it.bars[t.outI].hms;
+  286:     return (it.cD && outH > 152000 && (t.why === 'time' || t.why === 'eod')) ? t.ret + (it.cD - t.outPx) / t.inPx * 100 : t.ret;
+  287:   };
+  288:   const sim = (it, t, T, X, mode, FEE) => {
+  289:     const tp = T == null ? Infinity : tgtPx(t.inPx, T);
+  290:     const need = T == null ? Infinity : (mode === 'through' ? tp + TS(tp) : tp);
+  291:     const trig = X == null ? Infinity : t.inPx * (1 + X / 100);
+  292:     const be = X == null ? -Infinity : tgtPx(t.inPx, FEE);
+  293:     let armed = false;
+  294:     for (let j = t.inI + 1; j <= t.outI; j++) {
+  295:       const b = it.bars[j];
+  296:       if (armed && b.l <= be) return { j, px: Math.min(b.o, be), why: 'be' };
+  297:       if (j === t.outI && (t.why === 'stop' || t.why === 'time')) break;
+  298:       if (b.h >= need) return { j, px: tp, why: 'tgt' };
+  299:       if (b.h >= trig) armed = true;
+  300:     }
+  301:     return null;
+  302:   };
+  303:   const KEY = (T, X) => String(T) + '|' + String(X), K0 = KEY(null, null), K15 = KEY(1.5, null), KB1 = KEY(null, 1);
+  304:   const XS = [null, 0.75, 1, 1.5, 2], TL = [null, 1.5];
+  305:   const SHOW = [[null, null], [null, 1], [null, 2], [1.5, null]];
+  306:   const hh = hms => Math.floor(hms / 100);
+  307:   const nextMin = x => { let h = Math.floor(x / 100), m = x % 100 + 1; if (m >= 60) { h++; m -= 60; } return h * 100 + m; };
+  308:   const VARS = [
+  309:     { id: 'cap', es: hms => hms % 100 ? nextMin(hh(hms)) : hh(hms) },
+  310:     { id: 'next', es: hms => nextMin(hh(hms)) }];
+  311:   const BK = [['chase', [-1, 0, 1, 2, 3, 5]], ['delay', [1, 5, 15, 30, 60, 120]], ['rise', [5, 10, 15, 20, 25]], ['openGap', [0, 2, 5, 10]],
+  312:     ['prevChg', [0, 5, 10, 20]], ['capRise', [5, 7, 10, 15, 20, 25]], ['capAmt', [500, 1000, 2000, 5000, 10000]], ['inHms', [91000, 91500, 93000, 100000, 110000, 130000]]];
+  313:   const FL = [['none', null, 0, [null]], ['chaseMax', 'chase', 1, [0, 0.5, 1, 2, 3]], ['delayMax', 'delay', 1, [5, 15, 30, 60]], ['riseMax', 'rise', 1, [10, 15, 20]],
+  314:     ['openGapMax', 'openGap', 1, [2, 5, 10]], ['capRiseMax', 'capRise', 1, [10, 15, 20, 25]], ['capRiseMin', 'capRise', -1, [5, 7, 10]],
+  315:     ['capAmtMin', 'capAmt', -1, [500, 1000, 2000, 5000]], ['inHmsMax', 'inHms', 1, [91500, 93000, 100000, 110000]]];
+  316:   const labsOf = e => { const L = []; for (let k = 0; k <= e.length; k++) L.push(k === 0 ? '<' + e[0] : k === e.length ? '>=' + e[k - 1] : e[k - 1] + '~' + e[k]); L.push('n/a'); return L; };
+  317:   const bOf = (v, e) => { if (!isFinite(v)) return 'n/a'; let k = 0; while (k < e.length && v >= e[k]) k++; return k === 0 ? '<' + e[0] : k === e.length ? '>=' + e[k - 1] : e[k - 1] + '~' + e[k]; };
+  318: 
+  319:   const mkRow = (it, t, FEE) => {
+  320:     const capT = it.cp ? toT(it.date, it.cp.hms) : null, bi = it.bars[t.inI];
+  321:     const r = { it, t, code: it.code, date: it.date, half: HA.has(it.date) ? 'A' : 'B', inHms: bi.hms,
+  322:       chase: it.cp ? (t.inPx / it.cp.px - 1) * 100 : NaN, delay: it.cp ? (bi.t - capT) / 60 : NaN,
+  323:       rise: it.dly ? (t.inPx / it.dly.c - 1) * 100 : NaN, openGap: it.dly ? (it.bars[it.start].o / it.dly.c - 1) * 100 : NaN,
+  324:       prevChg: it.dly ? it.dly.chg : NaN, capRise: it.cp && it.dly ? (it.cp.px / it.dly.c - 1) * 100 : NaN, capAmt: it.cp ? it.cp.amt : NaN, R: {} };
+  325:     for (const T of TL) for (const X of XS) {
+  326:       const o = (T == null && X == null) ? null : sim(it, t, T, X, 'through', FEE);
+  327:       if (o) { const ret = (o.px / t.inPx - 1) * 100 - FEE; r.R[KEY(T, X)] = { ret, adj: ret, why: o.why }; }
+  328:       else r.R[KEY(T, X)] = { ret: t.ret, adj: adjRet(it, t), why: '' };
+  329:     }
+  330:     return r;
+  331:   };
+  332:   const agg = (sel, key) => {
+  333:     const trs = []; let sumA = 0, Aa = 0, Bb = 0, xx = 0, lossD = 0, worst = 0, tg = 0, be = 0;
+  334:     for (const r of sel) {
+  335:       const z = r.R[key]; trs.push({ ret: z.ret, mfe: r.t.mfe }); sumA += z.adj;
+  336:       if (r.half === 'A') Aa += z.adj; else Bb += z.adj; if (!EXCL.has(r.date)) xx += z.adj;
+  337:       if (z.adj < 0) lossD++; if (z.adj < worst) worst = z.adj; if (z.why === 'tgt') tg++; if (z.why === 'be') be++;
+  338:     }
+  339:     return Object.assign(stats(trs), { sumA, A: Aa, B: Bb, x: xx, lossD, worst, tg, be });
+  340:   };
+  341:   const SH = 'filter          th     T    BE    n  skip  win%  sumAdj   A_adj   B_adj   xExcl    PF    MDD loss%  worstD  tgt%   be%  nb';
+  342:   const scL = z => z.fn.padEnd(11) + pad(z.th == null ? '-' : z.th, 7) + pad(z.T == null ? 'off' : z.T, 6) + pad(z.X == null ? 'off' : z.X, 6) + pad(z.a.n, 5) + pad(z.skip, 6) +
+  343:     pad(z.a.n ? (z.a.w / z.a.n * 100).toFixed(1) : '-', 6) + pad(fx(z.a.sumA), 8) + pad(fx(z.a.A), 8) + pad(fx(z.a.B), 8) + pad(fx(z.a.x), 8) +
+  344:     pad(z.a.pf.toFixed(2), 6) + pad(z.a.mdd.toFixed(1), 7) + pad(z.a.n ? (z.a.lossD / z.a.n * 100).toFixed(1) : '-', 6) + pad(fx(z.a.worst), 8) +
+  345:     pad(z.a.n ? (z.a.tg / z.a.n * 100).toFixed(1) : '-', 6) + pad(z.a.n ? (z.a.be / z.a.n * 100).toFixed(1) : '-', 6) + pad(z.nbOk + '/' + z.nbN, 5);
+  346: 
+  347:   for (const s of strats) {
+  348:     const P0 = s.params, FEE = P0.FeePct;
+  349:     const natES = V1.prep(Object.assign({}, P0, { Date: '', TickScope: 120 }))._entS / 100;
+  350:     const nat = new Map(), natRows = [];
+  351:     for (const it of items) { const tr = run(it, it.bars, it.start, P0).r.trades; nat.set(it, tr); if (tr.length) natRows.push(mkRow(it, tr[0], FEE)); }
+  352:     const nb = agg(natRows, K0), post = natRows.filter(r => isFinite(r.delay) && r.delay >= 0), pa = agg(post, K0);
+  353:     sums.push(s.id + ' native first: n=' + nb.n + ' sum=' + fx(nb.sum) + ' adj=' + fx(nb.sumA) + ' | post-capture subset n=' + pa.n + ' adj=' + fx(pa.sumA) + ' A=' + fx(pa.A) + ' B=' + fx(pa.B) + ' | native EntryStart=' + natES);
+  354:     if (s.id === B.id) {
+  355:       ok('repro S4-3 native first sum/adj ' + s.id, nb.sum.toFixed(2) === XN[0].toFixed(2) && nb.sumA.toFixed(2) === XN[1].toFixed(2), 'got ' + nb.sum.toFixed(2) + ' ' + nb.sumA.toFixed(2));
+  356:       ok('repro S4-3 post-capture subset n/adj ' + s.id, pa.n === XN[2] && pa.sumA.toFixed(2) === XN[3].toFixed(2), 'got n=' + pa.n + ' adj=' + pa.sumA.toFixed(2));
+  357:     }
+  358:     for (const V of VARS) {
+  359:       const rows = []; let noCap = 0, noTrd = 0, pm = 0, pc = 0, p1 = '', viol = 0, late = 0;
+  360:       for (const it of items) {
+  361:         if (!it.cp) { noCap++; continue; }
+  362:         const es = Math.max(natES, V.es(it.cp.hms));
+  363:         const tr = run(it, it.bars, it.start, Object.assign({}, P0, { EntryStart: es, MaxTrades: 1 })).r.trades;
+  364:         const nt = nat.get(it);
+  365:         if (nt.length && it.bars[nt[0].inI].hms >= es * 100) {
+  366:           pc++; const m = sameTr({ trades: nt.slice(0, 1) }, { trades: tr.slice(0, 1) }, 0);
+  367:           if (m) { pm++; if (!p1) p1 = it.code + ' ' + it.date + ': ' + m; }
+  368:         }
+  369:         if (tr.length > 1 || (tr.length && it.bars[tr[0].inI].hms < es * 100)) viol++;
+  370:         if (!tr.length) { noTrd++; continue; }
+  371:         if (nt.length && it.bars[nt[0].inI].hms < es * 100) late++;
+  372:         rows.push(mkRow(it, tr[0], FEE));
+  373:       }
+  374:       ok('causal ' + V.id + ': native first trade after capture unchanged ' + s.id, pm === 0, 'mismatch=' + pm + '/' + pc + ' ' + p1);
+  375:       ok('causal ' + V.id + ': no entry before EntryStart and <=1 trade ' + s.id, viol === 0, 'viol=' + viol);
+  376:       if (!rows.length) continue;
+  377:       const a0 = agg(rows, K0), a15 = agg(rows, K15), ab1 = agg(rows, KB1);
+  378:       sums.push(s.id + ' ' + V.id + ': rows=' + rows.length + ' sameAsNative=' + pc + ' newAfterPreCapEntry=' + late + ' noTrade=' + noTrd + ' noCapture=' + noCap +
+  379:         ' | off adj=' + fx(a0.sumA) + ' A=' + fx(a0.A) + ' B=' + fx(a0.B) + ' x=' + fx(a0.x) + ' loss%=' + (a0.lossD / a0.n * 100).toFixed(1) +
+  380:         ' | BE1 adj=' + fx(ab1.sumA) + ' A=' + fx(ab1.A) + ' B=' + fx(ab1.B) + ' | T1.5 adj=' + fx(a15.sumA) + ' A=' + fx(a15.A) + ' B=' + fx(a15.B));
+  381: 
+  382:       const sc = [];
+  383:       for (const [fn, fk, dir, ths] of FL) for (let q = 0; q < ths.length; q++) {
+  384:         const th = ths[q], sel = fk == null ? rows : rows.filter(r => !isFinite(r[fk]) || (dir > 0 ? r[fk] <= th : r[fk] >= th));
+  385:         for (const T of TL) for (const X of XS) sc.push({ fn, th, q, T, X, skip: rows.length - sel.length, a: agg(sel, KEY(T, X)) });
+  386:       }
+  387:       const pos = z => z.a.A > 0 && z.a.B > 0;
+  388:       for (const z of sc) { const nbs = sc.filter(y => y.fn === z.fn && y.T === z.T && y.X === z.X && Math.abs(y.q - z.q) === 1); z.nbN = nbs.length; z.nbOk = nbs.filter(pos).length; }
+  389:       const rob = sc.filter(z => pos(z) && z.a.x > 0 && z.nbOk === z.nbN && z.a.n >= 50).sort((a, b) => b.a.sumA - a.a.sumA);
+  390:       data(s.id + ' ' + V.id + ' ROBUST (A>0,B>0,xExcl>0, all neighbor thresholds A>0,B>0, n>=50) count=' + rob.length, [SH].concat(rob.slice(0, 20).map(scL)));
+  391:       data(s.id + ' ' + V.id + ' top15 sumAdj with A>0 and B>0', [SH].concat(sc.filter(pos).sort((a, b) => b.a.sumA - a.a.sumA).slice(0, 15).map(scL)));
+  392:       const bl = ['feat     bucket          n  win%  sumAdj  avgAdj   BE1adj  T15adj   A_adj   B_adj loss%  avgMfe'];
+  393:       for (const [fk, edges] of BK) for (const lb of labsOf(edges)) {
+  394:         const sel = rows.filter(r => bOf(r[fk], edges) === lb); if (!sel.length) continue;
+  395:         const a = agg(sel, K0), b1 = agg(sel, KB1), b = agg(sel, K15);
+  396:         bl.push(fk.padEnd(8) + ' ' + lb.padEnd(14) + pad(a.n, 4) + pad((a.w / a.n * 100).toFixed(1), 6) + pad(fx(a.sumA), 8) + pad(fx(a.sumA / a.n), 8) + pad(fx(b1.sumA), 9) + pad(fx(b.sumA), 8) +
+  397:           pad(fx(a.A), 8) + pad(fx(a.B), 8) + pad((a.lossD / a.n * 100).toFixed(1), 6) + pad(a.avgMfe.toFixed(2), 8));
+  398:       }
+  399:       data(s.id + ' ' + V.id + ' buckets (capRise=capture px vs prev close %, capAmt=capture-minute amount, million KRW)', bl);
+  400:       const shown = sc.filter(z => z.fn === 'none' || SHOW.some(k => k[0] === z.T && k[1] === z.X));
+  401:       data(s.id + ' ' + V.id + ' scan (none: all exits; filters: off/off, BE1, BE2, T1.5) xExcl=without ' + [...EXCL].join('/'), [SH].concat(shown.map(scL)));
+  402:       const dl = ['date      half elig trd  win%  sumAdj   BE1adj  T15adj  avgDelay  avgChase  avgCapRise'];
+  403:       const dRow = (lab, hf, el, sel) => {
+  404:         if (!sel.length) return lab.padEnd(10) + hf.padEnd(5) + pad(el, 4) + pad(0, 4);
+  405:         const a = agg(sel, K0), b1 = agg(sel, KB1), b = agg(sel, K15);
+  406:         return lab.padEnd(10) + hf.padEnd(5) + pad(el, 4) + pad(a.n, 4) + pad((a.w / a.n * 100).toFixed(1), 6) + pad(fx(a.sumA), 8) + pad(fx(b1.sumA), 9) + pad(fx(b.sumA), 8) +
+  407:           pad(f2(avg(sel.map(r => r.delay))), 10) + pad(f2(avg(sel.map(r => r.chase))), 10) + pad(f2(avg(sel.map(r => r.capRise))), 12);
+  408:       };
+  409:       for (const d of dates) dl.push(dRow(d, HA.has(d) ? 'A' : 'B', items.filter(x => x.date === d && x.cp).length, rows.filter(r => r.date === d)));
+  410:       dl.push(dRow('A', '', items.filter(x => HA.has(x.date) && x.cp).length, rows.filter(r => r.half === 'A')));
+  411:       dl.push(dRow('B', '', items.filter(x => !HA.has(x.date) && x.cp).length, rows.filter(r => r.half === 'B')));
+  412:       dl.push(dRow('excl', '', items.filter(x => !EXCL.has(x.date) && x.cp).length, rows.filter(r => !EXCL.has(r.date))));
+  413:       data(s.id + ' ' + V.id + ' by date', dl);
+  414:       const fc = ['code,date,half,capHms,capPx,capAmt,inHms,inPx,delay,chase,rise,capRise,openGap,prevChg,why,ret,retAdj,mfe,mae,adjBE1,whyBE1,adjT15,whyT15'];
+  415:       for (const r of rows) fc.push([r.code, r.date, r.half, r.it.cp.hms, r.it.cp.px, f4(r.capAmt), r.inHms, r.t.inPx, f4(r.delay), f4(r.chase), f4(r.rise), f4(r.capRise), f4(r.openGap), f4(r.prevChg),
+  416:         r.t.why, f4(r.R[K0].ret), f4(r.R[K0].adj), f4(r.t.mfe), f4(r.t.mae), f4(r.R[KB1].adj), r.R[KB1].why || r.t.why, f4(r.R[K15].adj), r.R[K15].why || r.t.why].join(','));
+  417:       fs.writeFileSync(path.join(RDIR, 'detail', 'causal_' + s.id + '_' + V.id + '.csv'), fc.join('\n') + '\n');
+  418:       const sv = ['filter,th,T,BE,n,skip,win,sumAdj,A,B,xExcl,pf,mdd,lossD,worst,tgt,be,nbOk,nbN'];
+  419:       for (const z of sc) sv.push([z.fn, z.th == null ? '' : z.th, z.T == null ? '' : z.T, z.X == null ? '' : z.X, z.a.n, z.skip, z.a.w, f4(z.a.sumA), f4(z.a.A), f4(z.a.B), f4(z.a.x), f4(z.a.pf), f4(z.a.mdd), z.a.lossD, f4(z.a.worst), z.a.tg, z.a.be, z.nbOk, z.nbN].join(','));
+  420:       fs.writeFileSync(path.join(RDIR, 'detail', 'scan_' + s.id + '_' + V.id + '.csv'), sv.join('\n') + '\n');
+  421:     }
+  422:   }
+  423:   return chk.every(c => c.c) ? 'PASS' : 'FAIL';
+  424: }
+  425: 
+  426: let verdict = 'FAIL', err = null;
+  427: try { verdict = main(); } catch (e) { err = e; verdict = 'FAIL'; }
+  428: report(verdict, err);
+  429: console.log(verdict + ' ' + STEP + ' -> ' + OUTF);
+  430: process.exit(verdict === 'PASS' ? 0 : 1);

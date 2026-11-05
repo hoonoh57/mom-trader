@@ -1,0 +1,540 @@
+#MT-REPORT v=report-1.0 step=S0.probe ver=probe-1.0 verdict=PASS ts=2026-11-04T22:00:26.498Z dur=0.1s
+#DIR E:\parent\projects\rea\projects\mom-trader\out\reports\S0.probe_20261105-070026
+#ENV node=v24.19.0 ps=5.1.26100.9818 os=win32-x64 report=report-1.0 envFile=found secretsMasked=7
+#CHK 5/5 PASS
+#DATA tree tools files=38 [path size mtime sha12] lines=38
+tools/chart_build.mjs  21615  2026-11-03 08:47  d9a6a49a9832
+tools/replay_ref.mjs  4068  2026-11-03 02:51  93fbcbfa3d8e
+tools/sz-engine.cjs  10539  2026-11-03 04:13  921bdbc3319c
+tools/sz-engine3.cjs  9768  2026-11-03 11:13  9fa7da1b1b10
+tools/sz-guard-selftest.cjs  9308  2026-11-03 15:33  18362a7ac704
+tools/sz-guard.cjs  9971  2026-11-03 15:33  19607cabd0a2
+tools/sz-guard11.cjs  11509  2026-11-03 16:34  73d188febcf9
+tools/sz-lab-guard.cjs  19744  2026-11-03 15:47  ad16648f7587
+tools/sz-lab-guard11.cjs  28892  2026-11-03 16:34  af796f31ead3
+tools/sz-lab.cjs  24115  2026-11-03 14:50  5da31163bca4
+tools/sz-lab3.cjs  29996  2026-11-03 11:13  4a921c36e331
+tools/sz-lab3.cjs.bak21a  29062  2026-11-03 11:01  -
+tools/sz-probe.cjs  1650  2026-11-03 10:24  f8a57abe368f
+tools/sz-render.js  10070  2026-11-03 04:13  60ece9d10f08
+tools/sz-risk-selftest.cjs  9778  2026-11-03 10:35  360b361c71ad
+tools/sz-risk-selftest.cjs.bak20a  9254  2026-11-03 10:24  -
+tools/sz-risk.cjs  11872  2026-11-03 10:28  b843afa96c92
+tools/sz-risk.cjs.bak20a  11778  2026-11-03 10:24  -
+tools/sz-run.cjs  13906  2026-11-03 04:13  2e6836d137bf
+tools/sz-selftest.cjs  5921  2026-11-03 04:13  b99a1669383b
+tools/ui/archive.cjs  6399  2026-11-04 16:11  96f7660a85ec
+tools/ui/archive.cjs.bak32  6399  2026-11-04 16:10  -
+tools/ui/engines.cjs  4661  2026-11-04 15:38  a0c7475eb567
+tools/ui/kiwoom-fetch.cjs  16512  2026-11-04 15:51  abd0fca41c37
+tools/ui/probe.cjs  9265  2026-11-05 07:00  3690760355f4
+tools/ui/report.cjs  12120  2026-11-05 07:00  1a815ad92ff7
+tools/ui/report.cjs.bak29  12113  2026-11-04 15:17  -
+tools/ui/s1.cjs  8642  2026-11-04 15:38  cae9ccfad14b
+tools/ui/s2.cjs  14438  2026-11-04 15:51  f6b314bab443
+tools/ui/s3.cjs  14596  2026-11-04 16:11  a4bf5cc21999
+tools/ui/s3.cjs.bak32  14596  2026-11-04 16:10  -
+tools/ui/s4_causal.cjs  31021  2026-11-04 21:48  63a7f64254c1
+tools/ui/s4_chart.cjs  37430  2026-11-04 22:10  2abd2fea2e56
+tools/ui/s4_entryq.cjs  28926  2026-11-04 21:33  78dbd46cbb1f
+tools/ui/s4_period.cjs  26999  2026-11-04 20:29  3d1576d18662
+tools/ui/s4_target.cjs  27985  2026-11-04 20:59  ab901c5cb2a4
+tools/ui/s4_warmup.cjs  19787  2026-11-04 20:10  e77361b4ba04
+tools/ui/server.cjs  3597  2026-11-04 15:38  22cf9b6c7907
+#END
+#DATA tree setup files=42 [path size mtime sha12] lines=42
+setup/00_run_all.ps1  840  2026-11-03 02:23  9978bad1c3fa
+setup/01_scaffold.ps1  2899  2026-11-03 02:23  adf36318ba47
+setup/02_core.ps1  4778  2026-11-03 02:23  76baa5bcd572
+setup/03_momentum.ps1  2552  2026-11-03 02:23  435fe6c867da
+setup/04_nmacd.ps1  2597  2026-11-03 02:23  96811372c2c9
+setup/05_bigprint.ps1  2215  2026-11-03 02:23  142d912c5aac
+setup/06_dayamount.ps1  3330  2026-11-03 02:23  e710cd60cb18
+setup/07_tests.ps1  15902  2026-11-03 02:23  e9f5ea3e2a23
+setup/08_verify.ps1  7055  2026-11-03 02:23  8c03aa02e0fa
+setup/09_fetch_ticks.ps1  13008  2026-11-03 08:54  18460ac7a97a
+setup/09_fetch_ticks.ps1.bak16  12688  2026-11-03 03:01  -
+setup/10_replay.ps1  5711  2026-11-03 02:51  3e04e8ad0c1f
+setup/11_chart.ps1  24699  2026-11-03 04:00  8ad1689052cd
+setup/12_fetch_daily.ps1  6995  2026-11-03 08:54  3c7638a31a09
+setup/12_fetch_daily.ps1.bak16  6701  2026-11-03 03:42  -
+setup/13_trade.ps1  46422  2026-11-03 04:13  b4a1fdd7f559
+setup/13_trade.ps1.bak  44006  2026-11-03 04:02  -
+setup/13a_patch.ps1  12539  2026-11-03 04:12  415b1f559141
+setup/14_lab.ps1  27066  2026-11-03 04:29  fc6d9d701813
+setup/15_candidates.ps1  2376  2026-11-03 04:36  ed2866f41339
+setup/16_patch_codes.ps1  2737  2026-11-03 08:54  f5f5c64b240c
+setup/17_leader.ps1  4012  2026-11-03 09:29  d672c3f01e41
+setup/20_risk.ps1  28285  2026-11-03 10:23  4a78adb04d2a
+setup/20a_risk_fix.ps1  3409  2026-11-03 10:28  bd064a018a9b
+setup/20b_selftest_fix.ps1  3613  2026-11-03 10:35  b2fc2a31ffc7
+setup/21_engine_v3.ps1  44323  2026-11-03 11:04  d453a1a53325
+setup/21_engine_v3.ps1.bak21a  43376  2026-11-03 10:45  -
+setup/22_guard.ps1  22543  2026-11-03 15:33  b0ef27061eaf
+setup/22b_guard_lab.ps1  21308  2026-11-03 15:47  620618fc463b
+setup/22c_guard11.ps1  46280  2026-11-03 16:34  070c76e19c7c
+setup/29_probe.ps1  25830  2026-11-04 15:20  5a07f99d0d61
+setup/29_probe.ps1.bak29a  25826  2026-11-04 15:17  -
+setup/30_server.ps1  26586  2026-11-04 15:36  ec9d6107049a
+setup/31_fetch.ps1  34112  2026-11-04 15:51  ec5a5fe9cdef
+setup/32_archive.ps1  24344  2026-11-04 16:07  b4bfadcdf17f
+setup/33_warmup.ps1  21744  2026-11-04 20:09  9ddd7f6092e9
+setup/34_period.ps1  28067  2026-11-04 20:29  18841951e3b7
+setup/35_target.ps1  29067  2026-11-04 20:59  24eaca5d7daf
+setup/36_entryq.ps1  30308  2026-11-04 21:32  10af71676cfd
+setup/37_causal.ps1  32414  2026-11-04 21:48  974faa83d62c
+setup/38_chart.ps1  16664  2026-11-04 22:10  248ff4eb4d6f
+setup/_lib.ps1  3037  2026-11-03 02:23  cd07e96d6fbd
+#END
+#DATA tree strategies files=82 [path size mtime sha12] lines=82
+strategies/candidates/C001.json  286  2026-11-03 04:29  853fb89488e3
+strategies/candidates/C002.json  224  2026-11-03 04:29  404dc741fe99
+strategies/candidates/C003.json  243  2026-11-03 04:29  a8d900fa0b36
+strategies/candidates/C004.json  244  2026-11-03 04:29  19ab949d4b08
+strategies/candidates/C005.json  252  2026-11-03 04:29  616bb9ff4a8f
+strategies/candidates/C006.json  243  2026-11-03 04:29  fce8e5303c26
+strategies/candidates/C007.json  173  2026-11-03 04:29  1d0ccb51ca27
+strategies/candidates/C008.json  200  2026-11-03 04:29  e95d09bb0ab1
+strategies/candidates/C009.json  179  2026-11-03 04:29  f0ad05503f1c
+strategies/candidates/C010.json  186  2026-11-03 04:29  0599bf6763af
+strategies/candidates/C011.json  231  2026-11-03 04:29  70dbaed76bea
+strategies/candidates/C012.json  171  2026-11-03 04:29  b9d84c54d47d
+strategies/candidates/C013.json  275  2026-11-03 04:36  0755a3016581
+strategies/candidates/C014.json  277  2026-11-03 04:36  86d3d45e9762
+strategies/candidates/C015.json  280  2026-11-03 04:36  933b0c077d20
+strategies/candidates/C016.json  277  2026-11-03 04:36  80ab61d9d018
+strategies/candidates/C017.json  303  2026-11-03 04:36  994611aad8d9
+strategies/candidates/C018.json  333  2026-11-03 04:36  b250b1b68ae7
+strategies/candidates/C019.json  382  2026-11-03 04:36  766dac7b06a0
+strategies/candidates/C020.json  341  2026-11-03 04:36  ed67f12df589
+strategies/candidates/C021.json  203  2026-11-03 11:17  25b7677b3400
+strategies/candidates/C022.json  219  2026-11-03 11:17  bb7c89cd666e
+strategies/candidates/C023.json  211  2026-11-03 11:17  6af17a264ff4
+strategies/candidates/C024.json  252  2026-11-03 14:50  36cce904a718
+strategies/candidates/C025.json  268  2026-11-03 14:50  3c4cf738ed31
+strategies/candidates/C026.json  268  2026-11-03 14:50  4097345e2e28
+strategies/candidates/C027.json  267  2026-11-03 14:50  d54fade78d9f
+strategies/candidates/C028.json  283  2026-11-03 14:50  eed5bb5dfe61
+strategies/engines/risk1.cjs  11872  2026-11-03 10:45  b843afa96c92
+strategies/engines/v1.cjs  10539  2026-11-03 04:29  921bdbc3319c
+strategies/engines/v3.cjs  9768  2026-11-03 10:45  9fa7da1b1b10
+strategies/frozen/R000.json  1233  2026-11-03 04:29  8036cf4e2d91
+strategies/frozen/S000.json  1235  2026-11-03 04:29  2efa1e7aa0ba
+strategies/guard/GP000.json  51  2026-11-03 15:33  813e9b6299d5
+strategies/guard/GP001.json  92  2026-11-03 15:33  9fefaa083536
+strategies/guard/GP002.json  87  2026-11-03 15:33  7b67d4ad4e40
+strategies/guard/GP003.json  84  2026-11-03 15:33  4adcd695ea3f
+strategies/guard/GP004.json  92  2026-11-03 15:33  991928e9bf2b
+strategies/guard/GP005.json  92  2026-11-03 15:33  3530860b60dd
+strategies/guard/GP006.json  98  2026-11-03 15:33  6c4a522329be
+strategies/guard/GP010.json  229  2026-11-03 15:33  589d1c985e6e
+strategies/guard/GP011.json  316  2026-11-03 15:33  d9ce85b00468
+strategies/guard/manifest.json  109  2026-11-03 15:33  5587fc2b6cb2
+strategies/guard11/GP000.json  43  2026-11-03 16:34  e2ccfda2a901
+strategies/guard11/GP020.json  100  2026-11-03 16:34  1a3fa80585f4
+strategies/guard11/GP021.json  116  2026-11-03 16:34  14e13e92deda
+strategies/guard11/GP022.json  92  2026-11-03 16:34  86ba1b14210e
+strategies/guard11/GP023.json  146  2026-11-03 16:34  3bcdc98d9e28
+strategies/guard11/GP024.json  156  2026-11-03 16:34  ef69faafb910
+strategies/guard11/GP025.json  156  2026-11-03 16:34  c11e79b6458d
+strategies/guard11/GP026.json  188  2026-11-03 16:34  420480b62baa
+strategies/guard11/manifest.json  207  2026-11-03 16:34  f64fc218182d
+strategies/ledger.csv  16773  2026-11-03 14:50  c7f7c4c11db6
+strategies/ledger3.csv  23513  2026-11-03 11:13  5779333414a8
+strategies/manifest.json  1232  2026-11-03 11:13  c23c29824398
+strategies/risk/RP000.json  50  2026-11-03 10:24  c31c6c0f367b
+strategies/risk/RP001.json  159  2026-11-03 10:24  5eb856df4961
+strategies/risk/RP002.json  252  2026-11-03 10:24  218c869175be
+strategies/risk/RP003.json  473  2026-11-03 10:24  9f14f9735427
+strategies/risk/RP004.json  625  2026-11-03 10:24  5a1d1e53ed13
+strategies/risk/RP005.json  167  2026-11-03 11:13  bb74dbf88623
+strategies/risk/RPK1.json  454  2026-11-03 10:24  9e687944115b
+strategies/risk/RPK2.json  367  2026-11-03 10:24  c595bfc243bc
+strategies/survivors/C003.json  2179  2026-11-03 14:50  2e2bd4130e14
+strategies/survivors/C006.json  1837  2026-11-03 14:50  8a412514c872
+strategies/survivors/C010.json  1796  2026-11-03 14:50  d8ba984fa4f2
+strategies/survivors/C013.json  2041  2026-11-03 14:50  81e8252a5a08
+strategies/survivors/C022.json  1569  2026-11-03 14:50  8f666a74142e
+strategies/survivors/C023.json  1562  2026-11-03 14:50  dcfdd1c96af1
+strategies/survivors/C026.json  1625  2026-11-03 14:50  83662f92b1e4
+strategies/survivors3/C006__RP000__indep.json  3467  2026-11-03 11:13  bcb28d67cc88
+strategies/survivors3/C006__RP000__port-r2.json  3470  2026-11-03 11:13  aea3e823cd87
+strategies/survivors3/C006__RP000__port.json  3465  2026-11-03 11:13  9c14a93f678b
+strategies/survivors3/C006__RP005__indep.json  3469  2026-11-03 11:13  ece42ad201bf
+strategies/survivors3/C006__RP005__port-r2.json  3472  2026-11-03 11:13  705d5b84bee3
+strategies/survivors3/C006__RP005__port.json  3467  2026-11-03 11:13  c5b57b80f6d3
+strategies/survivors3/C013__RP000__indep.json  3464  2026-11-03 11:13  aba298239073
+strategies/survivors3/C013__RP000__port-r2.json  3469  2026-11-03 11:13  c6aa6e55db19
+strategies/survivors3/C013__RP000__port.json  3462  2026-11-03 11:13  c689b7861666
+strategies/survivors3/C013__RP005__indep.json  3466  2026-11-03 11:13  dc53c16656f6
+strategies/survivors3/C013__RP005__port-r2.json  3471  2026-11-03 11:13  adfb29dbb6e1
+strategies/survivors3/C013__RP005__port.json  3464  2026-11-03 11:13  862505a33b99
+#END
+#DATA show tools/ui/s4_causal.cjs:260-430 (total 430 lines, sha12 63a7f64254c1) lines=171
+  260:   for (const s of strats) {
+  261:     const x = run(a0, a0.bars, a0.start, s.params).r, y = run(b0, b0.bars, b0.start, s.params).r;
+  262:     const m = sameTr(x, y, 0) || sameCnt(x, y);
+  263:     ok('rest pipeline = old pipeline ' + s.id, !m, m);
+  264:   }
+  265:   if (chk.some(c => !c.c)) return 'FAIL';
+  266: 
+  267:   const capF = findCapCsv(); let cap = new Map();
+  268:   if (!ok('capture csv found', !!capF, 'pass -Csv')) return 'FAIL';
+  269:   { const c = loadCap(capF); cap = c.m; sums.push('capture csv=' + capF + ' rows=' + c.rows + ' bad=' + c.bad + ' stockDays=' + cap.size); }
+  270: 
+  271:   const files = fs.readdirSync(restT).filter(f => f.toLowerCase().endsWith('.csv') && f.includes(Match)).sort();
+  272:   const items = []; let excl = 0;
+  273:   for (const f of files) { let it; try { it = loadItem(restT, restD, f); } catch (e) { excl++; continue; } if (it.start >= MINW) items.push(it); }
+  274:   items.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.code < b.code ? -1 : 1));
+  275:   if (!ok('eligible stock-days >= 1', items.length > 0, 'eligible=' + items.length)) return 'FAIL';
+  276:   const dates = [...new Set(items.map(x => x.date))].sort(), HA = new Set(dates.slice(0, Math.ceil(dates.length / 2)));
+  277:   for (const it of items) { it.cD = dayClose(restD, it.code, it.date); it.cp = cap.get(it.code + '|' + it.date) || null; }
+  278:   const capHist = {}; for (const it of items) if (it.cp) { const k = String(it.cp.hms); capHist[k] = (capHist[k] || 0) + 1; }
+  279:   sums.push('eligible=' + items.length + ' withCapture=' + items.filter(x => x.cp).length + ' capSec!=0:' + items.filter(x => x.cp && x.cp.hms % 100).length +
+  280:     ' dates=' + dates.length + ' A=' + dates[0] + '~' + [...HA].pop() + ' excl=' + [...EXCL].join('/'));
+  281:   sums.push('capture hms histogram (top 8): ' + Object.entries(capHist).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0] + ':' + e[1]).join(' '));
+  282: 
+  283:   const tgtPx = (entry, T) => { const raw = entry * (1 + T / 100), ts = TS(raw); return Math.ceil(raw / ts - 1e-9) * ts; };
+  284:   const adjRet = (it, t) => {
+  285:     const outH = it.bars[t.outI].hms;
+  286:     return (it.cD && outH > 152000 && (t.why === 'time' || t.why === 'eod')) ? t.ret + (it.cD - t.outPx) / t.inPx * 100 : t.ret;
+  287:   };
+  288:   const sim = (it, t, T, X, mode, FEE) => {
+  289:     const tp = T == null ? Infinity : tgtPx(t.inPx, T);
+  290:     const need = T == null ? Infinity : (mode === 'through' ? tp + TS(tp) : tp);
+  291:     const trig = X == null ? Infinity : t.inPx * (1 + X / 100);
+  292:     const be = X == null ? -Infinity : tgtPx(t.inPx, FEE);
+  293:     let armed = false;
+  294:     for (let j = t.inI + 1; j <= t.outI; j++) {
+  295:       const b = it.bars[j];
+  296:       if (armed && b.l <= be) return { j, px: Math.min(b.o, be), why: 'be' };
+  297:       if (j === t.outI && (t.why === 'stop' || t.why === 'time')) break;
+  298:       if (b.h >= need) return { j, px: tp, why: 'tgt' };
+  299:       if (b.h >= trig) armed = true;
+  300:     }
+  301:     return null;
+  302:   };
+  303:   const KEY = (T, X) => String(T) + '|' + String(X), K0 = KEY(null, null), K15 = KEY(1.5, null), KB1 = KEY(null, 1);
+  304:   const XS = [null, 0.75, 1, 1.5, 2], TL = [null, 1.5];
+  305:   const SHOW = [[null, null], [null, 1], [null, 2], [1.5, null]];
+  306:   const hh = hms => Math.floor(hms / 100);
+  307:   const nextMin = x => { let h = Math.floor(x / 100), m = x % 100 + 1; if (m >= 60) { h++; m -= 60; } return h * 100 + m; };
+  308:   const VARS = [
+  309:     { id: 'cap', es: hms => hms % 100 ? nextMin(hh(hms)) : hh(hms) },
+  310:     { id: 'next', es: hms => nextMin(hh(hms)) }];
+  311:   const BK = [['chase', [-1, 0, 1, 2, 3, 5]], ['delay', [1, 5, 15, 30, 60, 120]], ['rise', [5, 10, 15, 20, 25]], ['openGap', [0, 2, 5, 10]],
+  312:     ['prevChg', [0, 5, 10, 20]], ['capRise', [5, 7, 10, 15, 20, 25]], ['capAmt', [500, 1000, 2000, 5000, 10000]], ['inHms', [91000, 91500, 93000, 100000, 110000, 130000]]];
+  313:   const FL = [['none', null, 0, [null]], ['chaseMax', 'chase', 1, [0, 0.5, 1, 2, 3]], ['delayMax', 'delay', 1, [5, 15, 30, 60]], ['riseMax', 'rise', 1, [10, 15, 20]],
+  314:     ['openGapMax', 'openGap', 1, [2, 5, 10]], ['capRiseMax', 'capRise', 1, [10, 15, 20, 25]], ['capRiseMin', 'capRise', -1, [5, 7, 10]],
+  315:     ['capAmtMin', 'capAmt', -1, [500, 1000, 2000, 5000]], ['inHmsMax', 'inHms', 1, [91500, 93000, 100000, 110000]]];
+  316:   const labsOf = e => { const L = []; for (let k = 0; k <= e.length; k++) L.push(k === 0 ? '<' + e[0] : k === e.length ? '>=' + e[k - 1] : e[k - 1] + '~' + e[k]); L.push('n/a'); return L; };
+  317:   const bOf = (v, e) => { if (!isFinite(v)) return 'n/a'; let k = 0; while (k < e.length && v >= e[k]) k++; return k === 0 ? '<' + e[0] : k === e.length ? '>=' + e[k - 1] : e[k - 1] + '~' + e[k]; };
+  318: 
+  319:   const mkRow = (it, t, FEE) => {
+  320:     const capT = it.cp ? toT(it.date, it.cp.hms) : null, bi = it.bars[t.inI];
+  321:     const r = { it, t, code: it.code, date: it.date, half: HA.has(it.date) ? 'A' : 'B', inHms: bi.hms,
+  322:       chase: it.cp ? (t.inPx / it.cp.px - 1) * 100 : NaN, delay: it.cp ? (bi.t - capT) / 60 : NaN,
+  323:       rise: it.dly ? (t.inPx / it.dly.c - 1) * 100 : NaN, openGap: it.dly ? (it.bars[it.start].o / it.dly.c - 1) * 100 : NaN,
+  324:       prevChg: it.dly ? it.dly.chg : NaN, capRise: it.cp && it.dly ? (it.cp.px / it.dly.c - 1) * 100 : NaN, capAmt: it.cp ? it.cp.amt : NaN, R: {} };
+  325:     for (const T of TL) for (const X of XS) {
+  326:       const o = (T == null && X == null) ? null : sim(it, t, T, X, 'through', FEE);
+  327:       if (o) { const ret = (o.px / t.inPx - 1) * 100 - FEE; r.R[KEY(T, X)] = { ret, adj: ret, why: o.why }; }
+  328:       else r.R[KEY(T, X)] = { ret: t.ret, adj: adjRet(it, t), why: '' };
+  329:     }
+  330:     return r;
+  331:   };
+  332:   const agg = (sel, key) => {
+  333:     const trs = []; let sumA = 0, Aa = 0, Bb = 0, xx = 0, lossD = 0, worst = 0, tg = 0, be = 0;
+  334:     for (const r of sel) {
+  335:       const z = r.R[key]; trs.push({ ret: z.ret, mfe: r.t.mfe }); sumA += z.adj;
+  336:       if (r.half === 'A') Aa += z.adj; else Bb += z.adj; if (!EXCL.has(r.date)) xx += z.adj;
+  337:       if (z.adj < 0) lossD++; if (z.adj < worst) worst = z.adj; if (z.why === 'tgt') tg++; if (z.why === 'be') be++;
+  338:     }
+  339:     return Object.assign(stats(trs), { sumA, A: Aa, B: Bb, x: xx, lossD, worst, tg, be });
+  340:   };
+  341:   const SH = 'filter          th     T    BE    n  skip  win%  sumAdj   A_adj   B_adj   xExcl    PF    MDD loss%  worstD  tgt%   be%  nb';
+  342:   const scL = z => z.fn.padEnd(11) + pad(z.th == null ? '-' : z.th, 7) + pad(z.T == null ? 'off' : z.T, 6) + pad(z.X == null ? 'off' : z.X, 6) + pad(z.a.n, 5) + pad(z.skip, 6) +
+  343:     pad(z.a.n ? (z.a.w / z.a.n * 100).toFixed(1) : '-', 6) + pad(fx(z.a.sumA), 8) + pad(fx(z.a.A), 8) + pad(fx(z.a.B), 8) + pad(fx(z.a.x), 8) +
+  344:     pad(z.a.pf.toFixed(2), 6) + pad(z.a.mdd.toFixed(1), 7) + pad(z.a.n ? (z.a.lossD / z.a.n * 100).toFixed(1) : '-', 6) + pad(fx(z.a.worst), 8) +
+  345:     pad(z.a.n ? (z.a.tg / z.a.n * 100).toFixed(1) : '-', 6) + pad(z.a.n ? (z.a.be / z.a.n * 100).toFixed(1) : '-', 6) + pad(z.nbOk + '/' + z.nbN, 5);
+  346: 
+  347:   for (const s of strats) {
+  348:     const P0 = s.params, FEE = P0.FeePct;
+  349:     const natES = V1.prep(Object.assign({}, P0, { Date: '', TickScope: 120 }))._entS / 100;
+  350:     const nat = new Map(), natRows = [];
+  351:     for (const it of items) { const tr = run(it, it.bars, it.start, P0).r.trades; nat.set(it, tr); if (tr.length) natRows.push(mkRow(it, tr[0], FEE)); }
+  352:     const nb = agg(natRows, K0), post = natRows.filter(r => isFinite(r.delay) && r.delay >= 0), pa = agg(post, K0);
+  353:     sums.push(s.id + ' native first: n=' + nb.n + ' sum=' + fx(nb.sum) + ' adj=' + fx(nb.sumA) + ' | post-capture subset n=' + pa.n + ' adj=' + fx(pa.sumA) + ' A=' + fx(pa.A) + ' B=' + fx(pa.B) + ' | native EntryStart=' + natES);
+  354:     if (s.id === B.id) {
+  355:       ok('repro S4-3 native first sum/adj ' + s.id, nb.sum.toFixed(2) === XN[0].toFixed(2) && nb.sumA.toFixed(2) === XN[1].toFixed(2), 'got ' + nb.sum.toFixed(2) + ' ' + nb.sumA.toFixed(2));
+  356:       ok('repro S4-3 post-capture subset n/adj ' + s.id, pa.n === XN[2] && pa.sumA.toFixed(2) === XN[3].toFixed(2), 'got n=' + pa.n + ' adj=' + pa.sumA.toFixed(2));
+  357:     }
+  358:     for (const V of VARS) {
+  359:       const rows = []; let noCap = 0, noTrd = 0, pm = 0, pc = 0, p1 = '', viol = 0, late = 0;
+  360:       for (const it of items) {
+  361:         if (!it.cp) { noCap++; continue; }
+  362:         const es = Math.max(natES, V.es(it.cp.hms));
+  363:         const tr = run(it, it.bars, it.start, Object.assign({}, P0, { EntryStart: es, MaxTrades: 1 })).r.trades;
+  364:         const nt = nat.get(it);
+  365:         if (nt.length && it.bars[nt[0].inI].hms >= es * 100) {
+  366:           pc++; const m = sameTr({ trades: nt.slice(0, 1) }, { trades: tr.slice(0, 1) }, 0);
+  367:           if (m) { pm++; if (!p1) p1 = it.code + ' ' + it.date + ': ' + m; }
+  368:         }
+  369:         if (tr.length > 1 || (tr.length && it.bars[tr[0].inI].hms < es * 100)) viol++;
+  370:         if (!tr.length) { noTrd++; continue; }
+  371:         if (nt.length && it.bars[nt[0].inI].hms < es * 100) late++;
+  372:         rows.push(mkRow(it, tr[0], FEE));
+  373:       }
+  374:       ok('causal ' + V.id + ': native first trade after capture unchanged ' + s.id, pm === 0, 'mismatch=' + pm + '/' + pc + ' ' + p1);
+  375:       ok('causal ' + V.id + ': no entry before EntryStart and <=1 trade ' + s.id, viol === 0, 'viol=' + viol);
+  376:       if (!rows.length) continue;
+  377:       const a0 = agg(rows, K0), a15 = agg(rows, K15), ab1 = agg(rows, KB1);
+  378:       sums.push(s.id + ' ' + V.id + ': rows=' + rows.length + ' sameAsNative=' + pc + ' newAfterPreCapEntry=' + late + ' noTrade=' + noTrd + ' noCapture=' + noCap +
+  379:         ' | off adj=' + fx(a0.sumA) + ' A=' + fx(a0.A) + ' B=' + fx(a0.B) + ' x=' + fx(a0.x) + ' loss%=' + (a0.lossD / a0.n * 100).toFixed(1) +
+  380:         ' | BE1 adj=' + fx(ab1.sumA) + ' A=' + fx(ab1.A) + ' B=' + fx(ab1.B) + ' | T1.5 adj=' + fx(a15.sumA) + ' A=' + fx(a15.A) + ' B=' + fx(a15.B));
+  381: 
+  382:       const sc = [];
+  383:       for (const [fn, fk, dir, ths] of FL) for (let q = 0; q < ths.length; q++) {
+  384:         const th = ths[q], sel = fk == null ? rows : rows.filter(r => !isFinite(r[fk]) || (dir > 0 ? r[fk] <= th : r[fk] >= th));
+  385:         for (const T of TL) for (const X of XS) sc.push({ fn, th, q, T, X, skip: rows.length - sel.length, a: agg(sel, KEY(T, X)) });
+  386:       }
+  387:       const pos = z => z.a.A > 0 && z.a.B > 0;
+  388:       for (const z of sc) { const nbs = sc.filter(y => y.fn === z.fn && y.T === z.T && y.X === z.X && Math.abs(y.q - z.q) === 1); z.nbN = nbs.length; z.nbOk = nbs.filter(pos).length; }
+  389:       const rob = sc.filter(z => pos(z) && z.a.x > 0 && z.nbOk === z.nbN && z.a.n >= 50).sort((a, b) => b.a.sumA - a.a.sumA);
+  390:       data(s.id + ' ' + V.id + ' ROBUST (A>0,B>0,xExcl>0, all neighbor thresholds A>0,B>0, n>=50) count=' + rob.length, [SH].concat(rob.slice(0, 20).map(scL)));
+  391:       data(s.id + ' ' + V.id + ' top15 sumAdj with A>0 and B>0', [SH].concat(sc.filter(pos).sort((a, b) => b.a.sumA - a.a.sumA).slice(0, 15).map(scL)));
+  392:       const bl = ['feat     bucket          n  win%  sumAdj  avgAdj   BE1adj  T15adj   A_adj   B_adj loss%  avgMfe'];
+  393:       for (const [fk, edges] of BK) for (const lb of labsOf(edges)) {
+  394:         const sel = rows.filter(r => bOf(r[fk], edges) === lb); if (!sel.length) continue;
+  395:         const a = agg(sel, K0), b1 = agg(sel, KB1), b = agg(sel, K15);
+  396:         bl.push(fk.padEnd(8) + ' ' + lb.padEnd(14) + pad(a.n, 4) + pad((a.w / a.n * 100).toFixed(1), 6) + pad(fx(a.sumA), 8) + pad(fx(a.sumA / a.n), 8) + pad(fx(b1.sumA), 9) + pad(fx(b.sumA), 8) +
+  397:           pad(fx(a.A), 8) + pad(fx(a.B), 8) + pad((a.lossD / a.n * 100).toFixed(1), 6) + pad(a.avgMfe.toFixed(2), 8));
+  398:       }
+  399:       data(s.id + ' ' + V.id + ' buckets (capRise=capture px vs prev close %, capAmt=capture-minute amount, million KRW)', bl);
+  400:       const shown = sc.filter(z => z.fn === 'none' || SHOW.some(k => k[0] === z.T && k[1] === z.X));
+  401:       data(s.id + ' ' + V.id + ' scan (none: all exits; filters: off/off, BE1, BE2, T1.5) xExcl=without ' + [...EXCL].join('/'), [SH].concat(shown.map(scL)));
+  402:       const dl = ['date      half elig trd  win%  sumAdj   BE1adj  T15adj  avgDelay  avgChase  avgCapRise'];
+  403:       const dRow = (lab, hf, el, sel) => {
+  404:         if (!sel.length) return lab.padEnd(10) + hf.padEnd(5) + pad(el, 4) + pad(0, 4);
+  405:         const a = agg(sel, K0), b1 = agg(sel, KB1), b = agg(sel, K15);
+  406:         return lab.padEnd(10) + hf.padEnd(5) + pad(el, 4) + pad(a.n, 4) + pad((a.w / a.n * 100).toFixed(1), 6) + pad(fx(a.sumA), 8) + pad(fx(b1.sumA), 9) + pad(fx(b.sumA), 8) +
+  407:           pad(f2(avg(sel.map(r => r.delay))), 10) + pad(f2(avg(sel.map(r => r.chase))), 10) + pad(f2(avg(sel.map(r => r.capRise))), 12);
+  408:       };
+  409:       for (const d of dates) dl.push(dRow(d, HA.has(d) ? 'A' : 'B', items.filter(x => x.date === d && x.cp).length, rows.filter(r => r.date === d)));
+  410:       dl.push(dRow('A', '', items.filter(x => HA.has(x.date) && x.cp).length, rows.filter(r => r.half === 'A')));
+  411:       dl.push(dRow('B', '', items.filter(x => !HA.has(x.date) && x.cp).length, rows.filter(r => r.half === 'B')));
+  412:       dl.push(dRow('excl', '', items.filter(x => !EXCL.has(x.date) && x.cp).length, rows.filter(r => !EXCL.has(r.date))));
+  413:       data(s.id + ' ' + V.id + ' by date', dl);
+  414:       const fc = ['code,date,half,capHms,capPx,capAmt,inHms,inPx,delay,chase,rise,capRise,openGap,prevChg,why,ret,retAdj,mfe,mae,adjBE1,whyBE1,adjT15,whyT15'];
+  415:       for (const r of rows) fc.push([r.code, r.date, r.half, r.it.cp.hms, r.it.cp.px, f4(r.capAmt), r.inHms, r.t.inPx, f4(r.delay), f4(r.chase), f4(r.rise), f4(r.capRise), f4(r.openGap), f4(r.prevChg),
+  416:         r.t.why, f4(r.R[K0].ret), f4(r.R[K0].adj), f4(r.t.mfe), f4(r.t.mae), f4(r.R[KB1].adj), r.R[KB1].why || r.t.why, f4(r.R[K15].adj), r.R[K15].why || r.t.why].join(','));
+  417:       fs.writeFileSync(path.join(RDIR, 'detail', 'causal_' + s.id + '_' + V.id + '.csv'), fc.join('\n') + '\n');
+  418:       const sv = ['filter,th,T,BE,n,skip,win,sumAdj,A,B,xExcl,pf,mdd,lossD,worst,tgt,be,nbOk,nbN'];
+  419:       for (const z of sc) sv.push([z.fn, z.th == null ? '' : z.th, z.T == null ? '' : z.T, z.X == null ? '' : z.X, z.a.n, z.skip, z.a.w, f4(z.a.sumA), f4(z.a.A), f4(z.a.B), f4(z.a.x), f4(z.a.pf), f4(z.a.mdd), z.a.lossD, f4(z.a.worst), z.a.tg, z.a.be, z.nbOk, z.nbN].join(','));
+  420:       fs.writeFileSync(path.join(RDIR, 'detail', 'scan_' + s.id + '_' + V.id + '.csv'), sv.join('\n') + '\n');
+  421:     }
+  422:   }
+  423:   return chk.every(c => c.c) ? 'PASS' : 'FAIL';
+  424: }
+  425: 
+  426: let verdict = 'FAIL', err = null;
+  427: try { verdict = main(); } catch (e) { err = e; verdict = 'FAIL'; }
+  428: report(verdict, err);
+  429: console.log(verdict + ' ' + STEP + ' -> ' + OUTF);
+  430: process.exit(verdict === 'PASS' ? 0 : 1);
+#END
+#DATA show setup/38_chart.ps1:1-193 (total 193 lines, sha12 248ff4eb4d6f) lines=193
+    1: ﻿param([string]$Strategies = 'S000', [int]$MinWarm = 400, [string]$Csv = '', [string]$ExclDates = '20261021,20261028')
+    2: $ErrorActionPreference = 'Continue'
+    3: $Root = 'E:\parent\projects\rea\projects\mom-trader'
+    4: $Out = Join-Path $Root 'out\FOR_OPUS.txt'
+    5: $Src = Join-Path $Root 'tools\ui\s4_causal.cjs'
+    6: $Js = Join-Path $Root 'tools\ui\s4_chart.cjs'
+    7: $U8 = New-Object System.Text.UTF8Encoding($false)
+    8: function Fail([string]$m, [string]$d) {
+    9:   $t = "#MT-REPORT v=report-1.0 step=S4.chart ver=ps-wrapper verdict=FAIL ts=$((Get-Date).ToString('s'))`n#FAIL $m`n$d`n"
+   10:   [System.IO.File]::WriteAllText($Out, $t, $U8); Write-Host "FAIL S4.chart -> $Out"; exit 1
+   11: }
+   12: if (-not (Test-Path $Src)) { Fail 'source missing' $Src }
+   13: if (-not (Test-Path (Join-Path $Root 'tools\sz-render.js'))) { Fail 'sz-render.js missing' '' }
+   14: $t = [System.IO.File]::ReadAllText($Src, $U8) -replace "`r`n", "`n"
+   15: $anchor = "  for (const s of strats) {`n    const P0 = s.params, FEE = P0.FeePct;`n"
+   16: $i = $t.IndexOf($anchor); $j = $t.LastIndexOf($anchor)
+   17: if ($i -lt 0 -or $i -ne $j) { Fail "s4_causal anchor not unique (first=$i last=$j)" '' }
+   18: $ver = "const VER = 'causal-1.0', STEP = 'S4.causal';"
+   19: $head = $t.Substring(0, $i)
+   20: if ([regex]::Matches($head, [regex]::Escape($ver)).Count -ne 1) { Fail 'VER line not found exactly once' '' }
+   21: $head = $head.Replace($ver, "const VER = 'chart-1.0', STEP = 'S4.chart';")
+   22: $part = @'
+   23:   { // ================= S4-3c chart section (chart-1.0) =================
+   24:   // Re-runs S4-3b 'cap' with the same run/mkRow/agg, gates on 382 / -106.50, then draws case charts (sz-render.js + overlay).
+   25:   const SS = strats.find(x => x.id === B.id);
+   26:   if (!ok('baseline in strategies', !!SS, 'strats=' + strats.map(x => x.id).join(','))) return 'FAIL';
+   27:   const P0 = SS.params, FEE = P0.FeePct;
+   28:   const natES = V1.prep(Object.assign({}, P0, { Date: '', TickScope: 120 }))._entS / 100;
+   29:   const capV = VARS.find(v => v.id === 'cap');
+   30:   const adj = r => r.R[K0].adj;
+   31:   const natRows = [], rows = [];
+   32:   for (const it of items) {
+   33:     const nt = run(it, it.bars, it.start, P0).r.trades;
+   34:     if (nt.length) natRows.push(mkRow(it, nt[0], FEE));
+   35:     if (!it.cp) continue;
+   36:     const es = Math.max(natES, capV.es(it.cp.hms));
+   37:     const tr = run(it, it.bars, it.start, Object.assign({}, P0, { EntryStart: es, MaxTrades: 1 })).r.trades;
+   38:     if (!tr.length) continue;
+   39:     const r = mkRow(it, tr[0], FEE);
+   40:     r.es = es; r.late = !!(nt.length && it.bars[nt[0].inI].hms < es * 100);
+   41:     rows.push(r);
+   42:   }
+   43:   const nb = agg(natRows, K0), a0 = agg(rows, K0);
+   44:   ok('repro native first S000 (+87.90 / +96.53)', nb.sum.toFixed(2) === '87.90' && nb.sumA.toFixed(2) === '96.53', 'got ' + nb.sum.toFixed(2) + ' ' + nb.sumA.toFixed(2));
+   45:   if (!ok('repro S4-3b cap S000 (382 / -106.50)', rows.length === 382 && a0.sumA.toFixed(2) === '-106.50', 'got ' + rows.length + ' ' + a0.sumA.toFixed(2))) return 'FAIL';
+   46: 
+   47:   const stopPx = r => r.t.inPx * (1 - P0.StopPct / 100);
+   48:   const CATS = [
+   49:     ['1_Uminus', r => /^U-/.test(r.t.why)], ['2_chase_mfe<0.5', r => r.t.mfe < 0.5], ['3_delay>30', r => r.delay > 30],
+   50:     ['4_late_new', r => r.late], ['5_stop', r => r.t.why === 'stop'], ['5b_stop_gapfill', r => r.t.why === 'stop' && r.t.outPx < stopPx(r) - 1e-6],
+   51:     ['7_Uplus', r => /^U\+/.test(r.t.why)], ['all', r => true]];
+   52:   const totLoss = rows.reduce((s, r) => s + Math.min(0, adj(r)), 0);
+   53:   const cl = ['category              n   win%   sumAdj   avgAdj  avgMfe  avgMae  lossSum  lossShare'];
+   54:   for (const [nm, fn] of CATS) {
+   55:     const sel = rows.filter(fn); if (!sel.length) { cl.push(nm.padEnd(20) + pad(0, 4)); continue; }
+   56:     const w = sel.filter(r => adj(r) > 0).length, sA = sel.reduce((s, r) => s + adj(r), 0), ls = sel.reduce((s, r) => s + Math.min(0, adj(r)), 0);
+   57:     cl.push(nm.padEnd(20) + pad(sel.length, 4) + pad((w / sel.length * 100).toFixed(1), 7) + pad(fx(sA), 9) + pad(fx(sA / sel.length), 9) +
+   58:       pad(f2(avg(sel.map(r => r.t.mfe))), 8) + pad(f2(avg(sel.map(r => r.t.mae))), 8) + pad(fx(ls), 9) + pad((totLoss ? ls / totLoss * 100 : 0).toFixed(0) + '%', 10));
+   59:   }
+   60:   data('S000 cap loss categories (overlapping) totalLoss=' + fx(totLoss), cl);
+   61:   const wm = {}; for (const r of rows) (wm[r.t.why] = wm[r.t.why] || []).push(r);
+   62:   const wl = ['why                  n   win%   sumAdj   avgAdj  avgMfe  avgMae'];
+   63:   for (const k of Object.keys(wm).sort((a, b) => wm[b].length - wm[a].length)) {
+   64:     const sel = wm[k], w = sel.filter(r => adj(r) > 0).length, sA = sel.reduce((s, r) => s + adj(r), 0);
+   65:     wl.push(k.padEnd(18) + pad(sel.length, 5) + pad((w / sel.length * 100).toFixed(1), 7) + pad(fx(sA), 9) + pad(fx(sA / sel.length), 9) + pad(f2(avg(sel.map(r => r.t.mfe))), 8) + pad(f2(avg(sel.map(r => r.t.mae))), 8));
+   66:   }
+   67:   data('S000 cap exit reasons', wl);
+   68: 
+   69:   const used = new Set(), cases = [], kk = r => r.code + '_' + r.date;
+   70:   const take = (cat, list, n) => { let c = 0; for (const r of list) { if (c >= n) break; if (used.has(kk(r))) continue; used.add(kk(r)); cases.push({ cat, r }); c++; } };
+   71:   const byLoss = a => a.slice().sort((x, y) => adj(x) - adj(y));
+   72:   take('1_Uminus', byLoss(rows.filter(r => /^U-/.test(r.t.why) && adj(r) < 0)), 5);
+   73:   take('2_chase', byLoss(rows.filter(r => r.t.mfe < 0.5 && adj(r) < 0)), 5);
+   74:   take('3_delay>30', byLoss(rows.filter(r => r.delay > 30 && adj(r) < 0)), 5);
+   75:   take('4_late_new', byLoss(rows.filter(r => r.late && adj(r) < 0)), 5);
+   76:   const stops = rows.filter(r => r.t.why === 'stop');
+   77:   take('5_stop_gap', byLoss(stops.filter(r => r.t.outPx < stopPx(r) - 1e-6)), 2);
+   78:   take('5_stop', byLoss(stops), 5 - cases.filter(c => c.cat === '5_stop_gap').length);
+   79:   take('6_0011A0', rows.filter(r => r.code === '0011A0' && r.date === '20261102'), 1);
+   80:   const d21 = rows.filter(r => r.date === '20261021');
+   81:   take('6_1021_worst', byLoss(d21), 1); take('6_1021_best', byLoss(d21).reverse(), 1);
+   82:   take('7_ctrl_Uplus', rows.filter(r => /^U\+/.test(r.t.why)).sort((x, y) => adj(y) - adj(x)), 3);
+   83: 
+   84:   const ANCH = "        else if (m.k === 'rej') cross(x, y(D.h[m.i]) - 8, 4, REJ[m.why] || '#fff');\n      });\n";
+   85:   const rbuf = fs.readFileSync(path.join(ROOT, 'tools', 'sz-render.js')), rsrc = rbuf.toString('utf8').replace(/\r\n/g, '\n');
+   86:   const nA = rsrc.split(ANCH).length - 1;
+   87:   if (!ok('sz-render.js overlay anchor unique', nA === 1, 'count=' + nA + ' sha12=' + sha(rbuf).slice(0, 12))) return 'FAIL';
+   88:   const OVL = [
+   89:     "      if (D.ov) {",
+   90:     "        var O = D.ov, vl = function (ii, col, txt, dy) { if (ii == null || ii < v0 || ii >= v1) return; g.strokeStyle = col; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(ii), p.y); g.lineTo(X(ii), p.y + p.h); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '11px sans-serif'; g.textAlign = 'left'; g.fillText(txt, X(ii) + 3, p.y + dy); };",
+   91:     "        vl(O.capI, '#ffffff', 'CAP ' + O.capTxt, 28); vl(O.esI, '#ffdd00', 'ES ' + O.esTxt, 42);",
+   92:     "        (O.stops || []).forEach(function (q) { var a = Math.max(q.a, v0), b = Math.min(q.b, v1 - 1); if (a > b) return; g.strokeStyle = '#ff3333'; g.setLineDash([6, 3]); g.beginPath(); g.moveTo(X(a), y(q.px)); g.lineTo(X(b), y(q.px)); g.stroke(); g.setLineDash([]); g.fillStyle = '#ff6666'; g.font = '10px sans-serif'; g.textAlign = 'left'; g.fillText('stop ' + q.px.toFixed(0), X(a) + 2, y(q.px
+   93:     "        g.font = '10px sans-serif'; g.textAlign = 'center';",
+   94:     "        D.marks.forEach(function (m) { if (m.i < v0 || m.i >= v1) return; if (m.k === 'rej' && m.why !== 'time') { g.fillStyle = REJ[m.why] || '#fff'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 15); } else if (m.k === 'exit') { g.fillStyle = '#ffcc66'; g.fillText(m.why, X(m.i), y(D.h[m.i]) - 36); } });",
+   95:     "      }"].join('\n') + '\n';
+   96:   const RENDER = rsrc.replace(ANCH, ANCH + OVL);
+   97: 
+   98:   const outDir = path.join(ROOT, 'out', 'charts', 'S4-3c'); fs.mkdirSync(outDir, { recursive: true });
+   99:   const tm = h => { const s = String(h).padStart(6, '0'); return s.slice(0, 2) + ':' + s.slice(2, 4) + ':' + s.slice(4); };
+  100:   const g2 = (x, d) => x == null || !isFinite(x) ? '-' : Number(x).toFixed(d);
+  101:   const firstIdx = (it, hms) => { for (let j = it.start; j < it.bars.length; j++) if (it.bars[j].d === it.date && it.bars[j].hms >= hms) return j; return null; };
+  102:   const STY = '<style>body{background:#111;color:#ddd;font:13px sans-serif;margin:8px}a{color:#6cf}table{border-collapse:collapse;margin:6px 0}td,th{border:1px solid #333;padding:2px 6px;text-align:right}th{background:#222}.up{color:#ff6b6b}.dn{color:#5cc8ff}pre{font:12px monospace}#tip{position:absolute;display:none;pointer-events:none;background:rgba(0,0,0,.88);border:1px solid #555;padding:6px 
+  103:   const HH = 'case cat              code   date     bar   time           O        H        L        C      mom         n       sig      hist        st stDir       ema safe amt_e8 big';
+  104:   const hts = [HH], idxR = [], cc = ['no,cat,code,date,capHms,capPx,es,inHms,inPx,outHms,outPx,why,ret,adj,mfe,mae,delay,chase,capRise,late,file'];
+  105:   let srcInd = '', mis = 0, mis1 = '';
+  106:   cases.forEach((cs, k) => {
+  107:     const r = cs.r, it = r.it, bars = it.bars, Pc = Object.assign({}, P0, { EntryStart: r.es, MaxTrades: 1 });
+  108:     const rr = run(it, bars, it.start, Pc), Pp = V1.prep(Object.assign({}, Pc, { Date: '', TickScope: 120 }));
+  109:     let ind = rr.ind, R1 = rr.r;
+  110:     if (ind) srcInd = 'run().ind';
+  111:     else {
+  112:       srcInd = 'recomputed V1.compute+simulate';
+  113:       ind = V1.compute(bars, Pp);
+  114:       const dayComplete = bars[it.start].hms <= Pp._sessMax;
+  115:       let limKind = null; if (it.dly && isFinite(it.dly.chg)) { if (it.dly.chg >= Pp.LimPct) limKind = 'limit'; else if (it.dly.chg >= Pp.SurgePct) limKind = 'surge'; }
+  116:       R1 = V1.simulate(bars, ind, Pp, { start: it.start, date: it.date, dayComplete, limKind });
+  117:       const m = sameTr(rr.r, R1, 0) || sameCnt(rr.r, R1);
+  118:       if (m) { mis++; if (!mis1) mis1 = it.code + ' ' + it.date + ': ' + m; }
+  119:     }
+  120:     const t = R1.trades[0] || r.t, v0 = Math.max(0, it.start - 300);
+  121:     const A_ = a => Array.from(a).slice(v0);
+  122:     const rd = (a, d) => Array.from(a).slice(v0).map(x => x == null || !isFinite(x) ? null : +Number(x).toFixed(d));
+  123:     const capI = firstIdx(it, it.cp.hms), esI = firstIdx(it, r.es * 100), sp = stopPx(r);
+  124:     const D = {
+  125:       o: A_(bars.map(b => b.o)), h: A_(bars.map(b => b.h)), l: A_(bars.map(b => b.l)), c: A_(bars.map(b => b.c)), hms: A_(bars.map(b => b.hms)),
+  126:       mom: rd(ind.mom, 3), n: rd(ind.n, 5), sig: rd(ind.sig, 5), ema: rd(ind.ema, 1), st: rd(ind.st, 1), stDir: A_(ind.stDir),
+  127:       amt: rd(ind.amt, 0), taamt: rd(ind.taamt, 0), big: A_(ind.big), cnt1: A_(ind.cnt1), thr: rd(ind.thr, 0), tickOk: A_(ind.tickOk),
+  128:       disp: rd(ind.disp, 2), safe: A_(ind.safe),
+  129:       trades: R1.trades.map(x => Object.assign({}, x, { inI: x.inI - v0, outI: x.outI - v0 })),
+  130:       marks: R1.marks.filter(m => m.i >= v0).map(m => Object.assign({}, m, { i: m.i - v0 })),
+  131:       emaLen: Pp.EmaLen, momLen: Pp.MomLen, safeTh: Pp.SafeTh, bigMode: Pp.BigMode, tickK: Pp.TickK,
+  132:       ov: { capI: capI == null ? null : capI - v0, capTxt: tm(it.cp.hms) + ' ' + it.cp.px, esI: esI == null ? null : esI - v0, esTxt: String(r.es),
+  133:         stops: R1.trades.map(x => ({ a: x.inI - v0, b: x.outI - v0, px: x.inPx * (1 - P0.StopPct / 100) })) } };
+  134:     const pg = [HH];
+  135:     const hl = (lab, j) => {
+  136:       if (j == null || j < 0 || j >= bars.length) return;
+  137:       const b = bars[j], hi = (ind.n[j] != null && ind.sig[j] != null) ? ind.n[j] - ind.sig[j] : NaN;
+  138:       const L = pad(k + 1, 4) + ' ' + cs.cat.padEnd(16) + ' ' + it.code.padEnd(6) + ' ' + it.date + ' ' + lab.padEnd(5) + ' ' + tm(b.hms) +
+  139:         pad(b.o, 9) + pad(b.h, 9) + pad(b.l, 9) + pad(b.c, 9) + pad(g2(ind.mom[j], 2), 9) + pad(g2(ind.n[j], 5), 10) + pad(g2(ind.sig[j], 5), 10) +
+  140:         pad(g2(hi, 5), 10) + pad(g2(ind.st[j], 1), 10) + pad(ind.stDir[j] == null ? '-' : ind.stDir[j], 6) + pad(g2(ind.ema[j], 1), 10) +
+  141:         pad(ind.safe[j] ? 1 : 0, 5) + pad(g2(ind.amt[j] / 1e8, 2), 7) + pad(ind.big[j] ? 1 : 0, 4);
+  142:       hts.push(L); pg.push(L);
+  143:     };
+  144:     hl('cap', capI); hl('in-1', t.inI - 1); hl('in', t.inI); hl('out', t.outI);
+  145:     const fn = 'case' + String(k + 1).padStart(2, '0') + '_' + it.code + '_' + it.date + '.html';
+  146:     const info = [['category', cs.cat], ['code date', it.code + ' ' + it.date], ['capture', tm(it.cp.hms) + ' / ' + it.cp.px + ' / ' + f2(r.capAmt) + 'M'], ['EntryStart', r.es],
+  147:       ['entry', tm(bars[t.inI].hms) + ' ' + t.inPx], ['exit', tm(bars[t.outI].hms) + ' ' + g2(t.outPx, 1) + ' ' + t.why], ['ret/adj', fx(t.ret) + ' / ' + fx(adj(r))],
+  148:       ['mfe/mae', fx(t.mfe) + ' / ' + fx(t.mae)], ['stop', sp.toFixed(1)], ['delay', f2(r.delay)], ['chase', fx(r.chase)], ['capRise', fx(r.capRise)],
+  149:       ['rise', fx(r.rise)], ['openGap', fx(r.openGap)], ['prevChg', fx(r.prevChg)], ['late', r.late ? 'Y' : '']];
+  150:     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + (k + 1) + ' ' + cs.cat + ' ' + it.code + ' ' + it.date + '</title>' + STY + '</head><body>' +
+  151:       '<a href="index.html">index</a> &nbsp; <b>#' + (k + 1) + ' ' + cs.cat + '</b>' +
+  152:       '<table><tr>' + info.slice(0, 8).map(x => '<th>' + x[0] + '</th>').join('') + '</tr><tr>' + info.slice(0, 8).map(x => '<td>' + x[1] + '</td>').join('') + '</tr>' +
+  153:       '<tr>' + info.slice(8).map(x => '<th>' + x[0] + '</th>').join('') + '</tr><tr>' + info.slice(8).map(x => '<td>' + x[1] + '</td>').join('') + '</tr></table>' +
+  154:       '<canvas id="cv" style="width:100%;height:80vh;display:block"></canvas><div id="tip"></div><pre>' + pg.join('\n') + '</pre>' +
+  155:       '<script>window.SZDATA=' + JSON.stringify(D) + ';</script><script>' + RENDER + '</script></body></html>';
+  156:     fs.writeFileSync(path.join(outDir, fn), html, 'utf8');
+  157:     idxR.push('<tr><td>' + (k + 1) + '</td><td>' + cs.cat + '</td><td><a href="' + fn + '">' + it.code + '</a></td><td>' + it.date + '</td><td>' + tm(it.cp.hms) + '</td><td>' +
+  158:       tm(bars[t.inI].hms) + '</td><td>' + tm(bars[t.outI].hms) + '</td><td>' + t.why + '</td><td class="' + (adj(r) > 0 ? 'up' : 'dn') + '">' + fx(adj(r)) + '</td><td>' +
+  159:       fx(t.mfe) + '</td><td>' + fx(t.mae) + '</td><td>' + f2(r.delay) + '</td></tr>');
+  160:     cc.push([k + 1, cs.cat, it.code, it.date, it.cp.hms, it.cp.px, r.es, bars[t.inI].hms, t.inPx, bars[t.outI].hms, f4(t.outPx), t.why, f4(t.ret), f4(adj(r)), f4(t.mfe), f4(t.mae), f4(r.delay), f4(r.chase), f4(r.capRise), r.late ? 1 : 0, fn].join(','));
+  161:   });
+  162:   if (srcInd.indexOf('recomputed') === 0) ok('chart recompute = engine run (all cases)', mis === 0, 'mismatch=' + mis + ' ' + mis1);
+  163:   fs.writeFileSync(path.join(outDir, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><title>S4-3c cases</title>' + STY + '</head><body><h3>S4-3c S000 cap (EntryStart=capture, MaxTrades=1) n=' +
+  164:     rows.length + ' adj=' + fx(a0.sumA) + '</h3><pre>' + cl.join('\n') + '\n\n' + wl.join('\n') + '</pre><table><tr><th>#</th><th>cat</th><th>code</th><th>date</th><th>cap</th><th>in</th><th>out</th><th>why</th><th>adj</th><th>mfe</th><th>mae</th><th>delay</th></tr>' +
+  165:     idxR.join('') + '</table></body></html>', 'utf8');
+  166:   fs.mkdirSync(path.join(RDIR, 'detail'), { recursive: true });
+  167:   fs.writeFileSync(path.join(RDIR, 'detail', 'chart_cases.csv'), cc.join('\n') + '\n');
+  168:   sums.push('charts=' + path.join(outDir, 'index.html') + ' cases=' + cases.length + ' ind=' + srcInd + ' render.sha12=' + sha(rbuf).slice(0, 12));
+  169:   data('HTS check bars (cap=capture bar, in-1=bar before entry, in=entry/signal bar, out=exit bar; amt in 1e8 KRW)', hts);
+  170:   }
+  171:   return chk.every(c => c.c) ? 'PASS' : 'FAIL';
+  172: }
+  173: 
+  174: let verdict = 'FAIL', err = null;
+  175: try { verdict = main(); } catch (e) { err = e; verdict = 'FAIL'; }
+  176: report(verdict, err);
+  177: console.log(verdict + ' ' + STEP + ' -> ' + OUTF);
+  178: process.exit(verdict === 'PASS' ? 0 : 1);
+  179: '@
+  180: $code = $head + ($part -replace "`r`n", "`n")
+  181: if (Test-Path $Js) { Copy-Item $Js "$Js.bak38" -Force }
+  182: [System.IO.File]::WriteAllText($Js, $code, $U8)
+  183: $c = & node --check $Js 2>&1 | Out-String
+  184: if ($LASTEXITCODE -ne 0) { Fail 'node --check failed' $c }
+  185: $a = @($Js, $Root, '--strategies', $Strategies, '--Strategies', $Strategies, '--minWarm', "$MinWarm", '--MinWarm', "$MinWarm", '--minwarm', "$MinWarm",
+  186:   '--excl', $ExclDates, '--exclDates', $ExclDates, '--ExclDates', $ExclDates)
+  187: if ($Csv) { $a += @('--csv', $Csv) }
+  188: $t0 = Get-Date
+  189: $o = & node @a 2>&1 | Out-String
+  190: $ec = $LASTEXITCODE
+  191: if (-not (Test-Path $Out) -or (Get-Item $Out).LastWriteTime -lt $t0) { Fail "node exit $ec, report not written" $o }
+  192: Write-Host ($o.Trim().Split("`n")[-1])
+  193: 
+#END
