@@ -5,6 +5,7 @@ body{margin:0;background:#141414;color:#ddd;font:13px 'Malgun Gothic',Consolas,s
 #top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:6px 12px;background:#1d1d1d;border-bottom:1px solid #333}
 #top b{font-size:15px}
 button{background:#333;color:#ddd;border:1px solid #555;padding:2px 10px;cursor:pointer;font:inherit}
+button.on{background:#2a3a55;color:#fff}
 .badge{padding:2px 10px;border-radius:10px;font-weight:bold;cursor:pointer}
 .ok{background:#1f5f2a;color:#cfc}.bad{background:#7a1d1d;color:#fcc}.wait{background:#444;color:#ccc}
 #meta{color:#888;width:100%}
@@ -16,12 +17,20 @@ nav button.on{background:#2c2c2c;color:#fff}
 nav .sep{width:14px}
 section{display:none;padding:14px}section.on{display:block}
 table{border-collapse:collapse}td,th{border:1px solid #333;padding:3px 8px;font-family:Consolas,monospace}
-th{background:#222}.y{color:#7f7}.n{color:#f77}.ph{color:#777}
+th{background:#222;position:sticky;top:0}.y{color:#7f7}.n{color:#f77}.ph{color:#777}
 pre{color:#f99;white-space:pre-wrap}
 pre.doc{color:#ddd;font-family:Consolas,'Malgun Gothic',monospace;background:#1a1a1a;border:1px solid #333;padding:10px;max-height:70vh;overflow:auto}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}
 input{background:#222;color:#ddd;border:1px solid #555;padding:3px 6px;width:260px}
 h3,h4{margin:6px 0}
+#rvWrap{display:flex;gap:10px}
+#rvLeft{width:40%;max-height:82vh;overflow:auto}
+#rvRight{flex:1;min-width:0}
+#rvFrame{width:100%;height:66vh;border:1px solid #333;background:#111}
+#rvList tr{cursor:pointer}#rvList tr:hover{background:#222}#rvList tr.sel{background:#2a3a55}
+td.l{text-align:left}
+.h-avoid{color:#f77;font-weight:bold}.h-ok{color:#7f7;font-weight:bold}.h-unsure{color:#fd8;font-weight:bold}
+#rvMsg{color:#8cf}
 </style></head><body>
 <div id="top">
 <b>mom-trader</b><span id="badge" class="badge wait">checking...</span>
@@ -59,9 +68,29 @@ h3,h4{margin:6px 0}
 </section>
 
 <section id="tab-review">
-<h3>인간 검토</h3>
-<p class="ph">U2 예정: out\charts 인간검증 차트 열람 + 라벨 입력 → out\human\review.csv 저장, 「검토 결과 복사」 버튼.</p>
-<p class="ph">그 전까지는 차트 파일을 탐색기에서 직접 열어 검토한다 (합의 D-04).</p>
+<div class="row"><h3>인간 검토</h3><span id="rvCnt" class="ph"></span>
+<button class="rf" data-rf="todo">미검토</button><button class="rf" data-rf="all">전체</button>
+<button class="rf" data-rf="avoid">진입 안 함</button><button class="rf" data-rf="ok">정당</button><button class="rf" data-rf="unsure">불확실</button>
+<label><input type="checkbox" id="rvChartOnly" style="width:auto"> 차트 있는 것만</label>
+<button id="rvReload">새로고침</button><button id="cpRev">검토 결과 복사</button></div>
+<div id="rvWrap">
+<div id="rvLeft"><table><thead><tr><th>#</th><th>code</th><th>date</th><th>in</th><th>adj</th><th>mfe</th><th>exit</th><th>패턴</th><th>판정</th></tr></thead><tbody id="rvList"></tbody></table></div>
+<div id="rvRight">
+<div id="rvHead" class="ph">왼쪽에서 거래를 선택하세요</div>
+<iframe id="rvFrame" src="about:blank"></iframe>
+<div class="row">
+<button class="lb" data-h="avoid">인간이라면 진입 안 함 (A)</button>
+<button class="lb" data-h="ok">진입 정당 (O)</button>
+<button class="lb" data-h="unsure">불확실 (U)</button>
+<span id="rvMsg"></span>
+</div>
+<div class="row">
+<input id="rvReason" placeholder="이유 (예: 프리마켓부터 1시간 상승 후 추격 진입)" style="width:420px">
+<input id="rvTags" placeholder="새 패턴 태그 (예: 프리마켓급등|늦은재진입)" style="width:280px">
+</div>
+<div class="ph">단축키(입력칸 밖): A/O/U 저장 후 다음 미검토로 이동, J/K 다음/이전. 저장은 out\human\review_log.csv에 한 줄 추가만 하며 기존 줄은 고치지 않는다. 같은 거래는 마지막 판정이 유효. 저장 후 41_pub -Push 하면 Opus가 저장소에서 읽는다.</div>
+</div>
+</div>
 </section>
 
 <section id="tab-run">
@@ -97,6 +126,7 @@ h3,h4{margin:6px 0}
     }
     try { localStorage.setItem('mt.tab', id); } catch (e) { }
     if (id === 'tab-run') loadResult();
+    if (id === 'tab-review' && !RV) loadReview();
   }
   for (var i = 0; i < tabs.length; i++) tabs[i].onclick = function () { show(this.getAttribute('data-t')); };
 
@@ -147,7 +177,7 @@ h3,h4{margin:6px 0}
       $('stagesDoc').textContent = st && st.ok ? st.text : 'STAGES.md 없음';
       $('charterDoc').textContent = ch && ch.ok ? ch.text : 'CHARTER.md 없음';
       var g = (ch && ch.ok ? ch.text : '').split(/\r?\n/).filter(function (l) { return /GOAL-[12]/.test(l); }).slice(0, 2)
-        .map(function (l) { return l.replace(/^[#\-\*\s]+/, ''); }).join('  |  ');
+        .map(function (l) { return l.replace(/^[#\-\*\s>]+/, ''); }).join('  |  ');
       $('goal').textContent = g || 'GOAL 미확인: research/CHARTER.md 확인 필요';
       renderLedger();
     }).catch(function (e) { $('goal').textContent = 'research 읽기 실패: ' + e.message; });
@@ -170,6 +200,104 @@ h3,h4{margin:6px 0}
   var fb = document.querySelectorAll('#tab-ledger button[data-f]');
   for (var j = 0; j < fb.length; j++) fb[j].onclick = function () { $('lf').value = this.getAttribute('data-f'); renderLedger(); };
 
+  var RV = null, rvF = 'todo', rvSel = -1, rvView = [];
+  var H_TXT = { avoid: '진입 안 함', ok: '정당', unsure: '불확실' };
+  function rvKey(o) { return o.code + '|' + o.date + '|' + (+o.inHms); }
+  function curKey() { return (rvSel >= 0 && rvView[rvSel]) ? rvKey(rvView[rvSel]) : null; }
+  function loadReview(keep) {
+    return getJson('/api/review').then(function (d) {
+      RV = d;
+      if (!d.ok) { $('rvCnt').textContent = d.err; return; }
+      var c = d.cnt;
+      $('rvCnt').textContent = '검토 ' + c.labeled + '/' + c.total + ' | 진입 안 함 ' + c.avoid + ' · 정당 ' + c.ok + ' · 불확실 ' + c.unsure + ' | 차트 ' + c.chart + '건';
+      renderReview(keep);
+    }).catch(function (e) { $('rvCnt').textContent = 'review 읽기 실패: ' + e.message; });
+  }
+  function renderReview(keepKey) {
+    if (!RV || !RV.ok) return;
+    var co = $('rvChartOnly').checked;
+    var rb = document.querySelectorAll('#tab-review button.rf');
+    for (var q = 0; q < rb.length; q++) rb[q].className = 'rf' + (rb[q].getAttribute('data-rf') === rvF ? ' on' : '');
+    rvView = RV.rows.filter(function (o) {
+      if (co && !o.chartUrl) return false;
+      if (rvF === 'all') return true;
+      if (rvF === 'todo') return !o.h;
+      return o.h === rvF;
+    });
+    var h = '';
+    rvView.forEach(function (o, i) {
+      h += '<tr data-i="' + i + '"><td>' + o.i + '</td><td>' + esc(o.code) + '</td><td>' + esc(o.date) + '</td><td>' + esc(o.inHms) +
+        '</td><td class="' + (+o.adj < 0 ? 'n' : 'y') + '">' + esc(o.adj) + '</td><td>' + esc(o.mfe) + '</td><td>' + esc(o.exit) +
+        '</td><td class="l">' + esc(o.tags) + (o.chartUrl ? '' : ' <span class="ph">(차트없음)</span>') +
+        '</td><td class="h-' + esc(o.h) + '">' + esc(H_TXT[o.h] || '') + '</td></tr>';
+    });
+    $('rvList').innerHTML = h;
+    var rs = $('rvList').querySelectorAll('tr');
+    for (var k = 0; k < rs.length; k++) rs[k].onclick = function () { selRv(+this.getAttribute('data-i')); };
+    var idx = -1;
+    if (keepKey) for (var m = 0; m < rvView.length; m++) if (rvKey(rvView[m]) === keepKey) { idx = m; break; }
+    if (idx < 0 && rvView.length) idx = Math.min(Math.max(rvSel, 0), rvView.length - 1);
+    rvSel = -1;
+    if (idx >= 0) selRv(idx);
+    else { $('rvHead').textContent = '해당 거래 없음'; $('rvFrame').setAttribute('data-src', ''); $('rvFrame').src = 'about:blank'; }
+  }
+  function selRv(i) {
+    if (i < 0 || i >= rvView.length) return;
+    var o = rvView[i], rs = $('rvList').querySelectorAll('tr');
+    for (var k = 0; k < rs.length; k++) rs[k].className = (k === i ? 'sel' : '');
+    if (rs[i]) rs[i].scrollIntoView({ block: 'nearest' });
+    rvSel = i;
+    $('rvHead').innerHTML = '<b>#' + o.i + ' ' + esc(o.code) + ' ' + esc(o.date) + ' ' + esc(o.inHms) + '</b> adj ' + esc(o.adj) + ' mfe ' + esc(o.mfe) +
+      ' ' + esc(o.exit) + ' | 패턴 ' + esc(o.tags || '-') + ' | 판정 <span class="h-' + esc(o.h) + '">' + esc(H_TXT[o.h] || '미검토') + '</span>' +
+      (o.hTs ? ' <span class="ph">' + esc(o.hTs) + '</span>' : '');
+    $('rvReason').value = o.hReason || '';
+    $('rvTags').value = o.hTags || '';
+    var src = o.chartUrl || 'about:blank';
+    if ($('rvFrame').getAttribute('data-src') !== src) { $('rvFrame').setAttribute('data-src', src); $('rvFrame').src = src; }
+    $('rvMsg').textContent = o.chartUrl ? '' : '이 거래는 차트 파일 없음 (판정은 가능)';
+  }
+  function saveLabel(h) {
+    if (rvSel < 0 || !rvView[rvSel]) return;
+    var o = rvView[rvSel], key = rvKey(o);
+    fetch('/api/label', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: o.code, date: o.date, inHms: o.inHms, human: h, reason: $('rvReason').value, tags: $('rvTags').value }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; }); })
+      .then(function () {
+        $('rvMsg').textContent = '저장됨: ' + o.code + ' ' + H_TXT[h];
+        var next = null;
+        for (var m = rvSel + 1; m < rvView.length; m++) if (!rvView[m].h) { next = rvKey(rvView[m]); break; }
+        return loadReview(next || key);
+      })
+      .catch(function (e) { $('rvMsg').textContent = '저장 실패: ' + e.message; });
+  }
+  var lb = document.querySelectorAll('#tab-review button.lb');
+  for (var n = 0; n < lb.length; n++) lb[n].onclick = function () { saveLabel(this.getAttribute('data-h')); };
+  var rfb = document.querySelectorAll('#tab-review button.rf');
+  for (var p = 0; p < rfb.length; p++) rfb[p].onclick = function () { rvF = this.getAttribute('data-rf'); renderReview(curKey()); };
+  $('rvChartOnly').onchange = function () { renderReview(curKey()); };
+  $('rvReload').onclick = function () { loadReview(curKey()); };
+  $('cpRev').onclick = function () {
+    loadReview(curKey()).then(function () {
+      if (!RV || !RV.ok) { msg('review 없음'); return; }
+      var c = RV.cnt, L = ['=== 인간 검토 결과 ' + new Date().toISOString() + ' ===',
+        '검토 ' + c.labeled + '/' + c.total + ' | avoid ' + c.avoid + ' ok ' + c.ok + ' unsure ' + c.unsure,
+        'code,date,inHms,adj,mfe,exit,tags,human,reason,newTags'];
+      RV.rows.forEach(function (o) {
+        if (o.h) L.push([o.code, o.date, o.inHms, o.adj, o.mfe, o.exit, o.tags, o.h, String(o.hReason || '').replace(/,/g, ';'), o.hTags].join(','));
+      });
+      copyText(L.join('\n'), '검토 결과');
+    });
+  };
+  document.addEventListener('keydown', function (e) {
+    if ($('tab-review').className !== 'on') return;
+    var t = e.target.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = (e.key || '').toLowerCase();
+    if (k === 'a') saveLabel('avoid'); else if (k === 'o') saveLabel('ok'); else if (k === 'u') saveLabel('unsure');
+    else if (k === 'j') selRv(rvSel + 1); else if (k === 'k') selRv(rvSel - 1); else return;
+    e.preventDefault();
+  });
+
   function loadResult() {
     return getJson('/api/result').then(function (r) {
       $('resMeta').textContent = r.name + (r.ok ? ' | ' + r.bytes + ' bytes | ' + r.mtime : ' | 없음 ' + r.err);
@@ -189,7 +317,7 @@ h3,h4{margin:6px 0}
   };
   $('rsReload').onclick = loadResearch;
   $('badge').onclick = function () { show('tab-data'); };
-  $('recheck').onclick = function () { load(); loadResearch(); };
+  $('recheck').onclick = function () { load(); loadResearch(); if (RV) loadReview(curKey()); };
 
   var saved = null;
   try { saved = localStorage.getItem('mt.tab'); } catch (e) { }

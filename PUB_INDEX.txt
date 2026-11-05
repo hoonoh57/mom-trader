@@ -1,4 +1,4 @@
-# PUB_INDEX pub-2.0 source=E:\parent\projects\rea\projects\mom-trader time=2026-11-05T09:27:03 files=453
+# PUB_INDEX pub-2.0 source=E:\parent\projects\rea\projects\mom-trader time=2026-11-05T09:34:56 files=453
 # sha256_12  bytes  lines  path
 fe17c4e7ac72  1849  20  docs/progress.md
 4c92b1802ae4  69790  163  out/charts/S4-3c/case01_036200_20261022.html
@@ -155,7 +155,7 @@ bae171765342  220660  165  out/charts/S4-3d/h120_190510_20261028.html
 2b778885151c  75731  165  out/charts/S4-3d/h121_080220_20261021.html
 81b9605adfc1  69979  165  out/charts/S4-3d/h122_052710_20261028.html
 2e5260e76dde  30376  61  out/charts/S4-3d/index.html
-5972d91ba652  8073  164  out/FOR_OPUS.txt
+599bcc516b50  897  22  out/FOR_OPUS.txt
 f6344e633237  25348  383  out/human/review.csv
 024d5c8b888d  398  12  out/reports/_run/probe_args.json
 b7ba6a966d73  186  6  out/reports/_run/s1_args.json
@@ -297,8 +297,8 @@ d68a45784669  48029  651  PLAN.md
 db76e0c449b0  981  23  README.md
 ba5df1cb9841  1545  19  research/CHARTER.md
 3aef29de04f2  1920  29  research/HANDOFF.md
-08ff0cc1d8ae  6813  116  research/LEDGER.md
-6ff37e2d83ca  1583  28  research/STAGES.md
+578b79a3a900  7423  120  research/LEDGER.md
+1b45350984d2  1844  29  research/STAGES.md
 cd07e96d6fbd  3037  74  setup/_lib.ps1
 9978bad1c3fa  840  29  setup/00_run_all.ps1
 adf36318ba47  2899  110  setup/01_scaffold.ps1
@@ -451,5 +451,5 @@ a4bf5cc21999  14596  232  tools/ui/s3.cjs
 3d1576d18662  26999  411  tools/ui/s4_period.cjs
 ab901c5cb2a4  27985  416  tools/ui/s4_target.cjs
 e77361b4ba04  19787  300  tools/ui/s4_warmup.cjs
-776a0ea1678c  6619  133  tools/ui/server.cjs
-3de84a59118d  10701  200  ui/index.html
+9fb9aaeda9e6  13519  267  tools/ui/server.cjs
+36dea7336101  18688  328  ui/index.html
